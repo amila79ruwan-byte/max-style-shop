@@ -1,20 +1,97 @@
+
 <!DOCTYPE html>
 <html lang="si">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAX STYLE</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAX STYLE | Style Without Limits</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-<h1>MAX STYLE</h1>
-<p>STYLE WITHOUT LIMITS</p>
+
+<header class="header">
+  <a href="#" class="logo">MAX <span>STYLE</span></a>
+  <p>STYLE WITHOUT LIMITS</p>
+  <button id="cartButton" class="cart-btn">
+    🛒 Cart (<span id="cartCount">0</span>)
+  </button>
 </header>
-<main>
-<h2>Welcome to MAX STYLE</h2>
-<p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
+
+<section class="hero">
+  <p class="small-title">NEW COLLECTION 2026</p>
+  <h1>STYLE WITHOUT<br><span>LIMITS</span></h1>
+  <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
+  <a href="#products" class="shop-btn">SHOP NOW →</a>
+</section>
+
+<section class="categories">
+  <h2>SHOP BY CATEGORY</h2>
+  <div class="category-list">
+    <a href="#products">MEN'S FASHION</a>
+    <a href="#products">WOMEN'S FASHION</a>
+    <a href="#products">NEW ARRIVALS</a>
+  </div>
+</section>
+
+<main id="products">
+  <h2>OUR COLLECTION</h2>
+  <p class="subtitle">Discover Your Style</p>
+
+  <div class="products">
+
+    <article class="product">
+      <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600" alt="Classic T Shirt">
+      <h3>Classic T-Shirt</h3>
+      <p class="price">Rs. 2,500</p>
+      <button class="add-cart" data-name="Classic T-Shirt" data-price="2500">ADD TO CART</button>
+    </article>
+
+    <article class="product">
+      <img src="https://images.unsplash.com/photo-1542272604-787c3835535d?w=600" alt="Denim Jeans">
+      <h3>Denim Jeans</h3>
+      <p class="price">Rs. 4,500</p>
+      <button class="add-cart" data-name="Denim Jeans" data-price="4500">ADD TO CART</button>
+    </article>
+
+    <article class="product">
+      <img src="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600" alt="Fashion Jacket">
+      <h3>Fashion Jacket</h3>
+      <p class="price">Rs. 6,500</p>
+      <button class="add-cart" data-name="Fashion Jacket" data-price="6500">ADD TO CART</button>
+    </article>
+
+    <article class="product">
+      <img src="https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600" alt="Women's Fashion">
+      <h3>Women's Fashion</h3>
+      <p class="price">Rs. 3,500</p>
+      <button class="add-cart" data-name="Women's Fashion" data-price="3500">ADD TO CART</button>
+    </article>
+
+  </div>
 </main>
+
+<section class="cart-section" id="cart">
+  <h2>YOUR SHOPPING CART</h2>
+  <div id="cartItems">Your cart is empty.</div>
+  <h3>Total: Rs. <span id="cartTotal">0</span></h3>
+
+  <h2>ORDER DETAILS</h2>
+  <form id="orderForm">
+    <input id="customerName" type="text" placeholder="Your Name" required>
+    <input id="phone" type="tel" placeholder="Phone Number" required>
+    <textarea id="address" placeholder="Delivery Address" required></textarea>
+    <button type="submit">PLACE ORDER</button>
+  </form>
+  <p id="orderMessage"></p>
+</section>
+
+<footer>
+  <h2>MAX STYLE</h2>
+  <p>STYLE WITHOUT LIMITS</p>
+  <p>© 2026 MAX STYLE. All Rights Reserved.</p>
+  <p>Sri Lanka 🇱🇰 | Prices in LKR</p>
+</footer>
+
 <script src="app.js"></script>
 </body>
 </html>
