@@ -1,0 +1,45 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #080808;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+header {
+  background: #111111;
+  padding: 35px 15px;
+  border-bottom: 2px solid #d4af37;
+}
+
+header h1 {
+  color: #d4af37;
+  font-size: 38px;
+  letter-spacing: 4px;
+}
+
+header p {
+  color: #cccccc;
+  margin-top: 10px;
+  letter-spacing: 3px;
+}
+
+main {
+  padding: 70px 20px;
+}
+
+main h2 {
+  color: #d4af37;
+  margin-bottom: 20px;
+}
+
+main p {
+  color: #dddddd;
+  font-size: 18px;
+}
