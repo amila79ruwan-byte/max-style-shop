@@ -1,9 +1,10 @@
 
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Discover the latest men's and women's fashion at MAX STYLE Sri Lanka.">
   <title>MAX STYLE | Style Without Limits</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,85 +12,123 @@
 
 <header class="header">
   <a href="#" class="logo">MAX <span>STYLE</span></a>
-  <p>STYLE WITHOUT LIMITS</p>
+  <p class="tagline">STYLE WITHOUT LIMITS</p>
   <button id="cartButton" class="cart-btn">
-    🛒 Cart (<span id="cartCount">0</span>)
+    🛍️ BAG (<span id="cartCount">0</span>)
   </button>
 </header>
 
-<section class="hero">
-  <p class="small-title">NEW COLLECTION 2026</p>
-  <h1>STYLE WITHOUT<br><span>LIMITS</span></h1>
-  <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
-  <a href="#products" class="shop-btn">SHOP NOW →</a>
-</section>
+<nav class="main-nav">
+  <a href="#">HOME</a>
+  <a href="#men">MEN</a>
+  <a href="#women">WOMEN</a>
+  <a href="#new-arrivals">NEW ARRIVALS</a>
+  <a href="#cart">MY BAG</a>
+</nav>
 
-<section class="categories">
-  <h2>SHOP BY CATEGORY</h2>
-  <div class="category-list">
-    <a href="#products">MEN'S FASHION</a>
-    <a href="#products">WOMEN'S FASHION</a>
-    <a href="#products">NEW ARRIVALS</a>
+<section class="hero">
+  <div class="hero-content">
+    <p class="small-title">THE NEW COLLECTION · 2026</p>
+    <h1>STYLE<br><span>WITHOUT</span><br>LIMITS.</h1>
+    <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
+    <a href="#new-arrivals" class="shop-btn">DISCOVER COLLECTION →</a>
   </div>
 </section>
 
-<main id="products">
-  <h2>OUR COLLECTION</h2>
+<section class="categories">
+  <p class="section-label">EXPLORE YOUR STYLE</p>
+  <h2>SHOP BY CATEGORY</h2>
+
+  <div class="category-list">
+    <a href="#men" class="category-card">
+      <span>01</span>
+      <h3>MEN'S<br>COLLECTION</h3>
+      <p>EXPLORE →</p>
+    </a>
+
+    <a href="#women" class="category-card">
+      <span>02</span>
+      <h3>WOMEN'S<br>COLLECTION</h3>
+      <p>EXPLORE →</p>
+    </a>
+  </div>
+</section>
+
+<main id="new-arrivals">
+  <p class="section-label">FRESH ARRIVALS</p>
+  <h2>NEW COLLECTION</h2>
   <p class="subtitle">Discover Your Style</p>
 
   <div class="products">
 
-    <article class="product">
-      <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600" alt="Classic T Shirt">
+    <article class="product" id="men">
+      <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=700" alt="Men's Classic T-Shirt">
+      <p class="product-category">MEN'S FASHION</p>
       <h3>Classic T-Shirt</h3>
       <p class="price">Rs. 2,500</p>
-      <button class="add-cart" data-name="Classic T-Shirt" data-price="2500">ADD TO CART</button>
+      <button class="add-cart" data-name="Classic T-Shirt" data-price="2500">ADD TO BAG</button>
     </article>
 
     <article class="product">
-      <img src="https://images.unsplash.com/photo-1542272604-787c3835535d?w=600" alt="Denim Jeans">
+      <img src="https://images.unsplash.com/photo-1542272604-787c3835535d?w=700" alt="Denim Jeans">
+      <p class="product-category">MEN'S FASHION</p>
       <h3>Denim Jeans</h3>
       <p class="price">Rs. 4,500</p>
-      <button class="add-cart" data-name="Denim Jeans" data-price="4500">ADD TO CART</button>
+      <button class="add-cart" data-name="Denim Jeans" data-price="4500">ADD TO BAG</button>
     </article>
 
     <article class="product">
-      <img src="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600" alt="Fashion Jacket">
-      <h3>Fashion Jacket</h3>
+      <img src="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=700" alt="Fashion Jacket">
+      <p class="product-category">MEN'S FASHION</p>
+      <h3>Premium Jacket</h3>
       <p class="price">Rs. 6,500</p>
-      <button class="add-cart" data-name="Fashion Jacket" data-price="6500">ADD TO CART</button>
+      <button class="add-cart" data-name="Premium Jacket" data-price="6500">ADD TO BAG</button>
     </article>
 
-    <article class="product">
-      <img src="https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600" alt="Women's Fashion">
-      <h3>Women's Fashion</h3>
+    <article class="product" id="women">
+      <img src="https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=700" alt="Women's Fashion">
+      <p class="product-category">WOMEN'S FASHION</p>
+      <h3>Women's Style</h3>
       <p class="price">Rs. 3,500</p>
-      <button class="add-cart" data-name="Women's Fashion" data-price="3500">ADD TO CART</button>
+      <button class="add-cart" data-name="Women's Style" data-price="3500">ADD TO BAG</button>
     </article>
 
   </div>
 </main>
 
 <section class="cart-section" id="cart">
-  <h2>YOUR SHOPPING CART</h2>
-  <div id="cartItems">Your cart is empty.</div>
+  <p class="section-label">YOUR SELECTION</p>
+  <h2>SHOPPING BAG</h2>
+
+  <div id="cartItems">Your bag is empty.</div>
   <h3>Total: Rs. <span id="cartTotal">0</span></h3>
 
-  <h2>ORDER DETAILS</h2>
-  <form id="orderForm">
-    <input id="customerName" type="text" placeholder="Your Name" required>
-    <input id="phone" type="tel" placeholder="Phone Number" required>
-    <textarea id="address" placeholder="Delivery Address" required></textarea>
-    <button type="submit">PLACE ORDER</button>
-  </form>
-  <p id="orderMessage"></p>
+  <div class="order-details">
+    <h2>CHECKOUT</h2>
+    <p>Enter your delivery details to place your order.</p>
+
+    <form id="orderForm">
+      <input id="customerName" type="text" placeholder="Full Name" required>
+      <input id="phone" type="tel" placeholder="Sri Lankan Phone Number" required>
+      <textarea id="address" placeholder="Delivery Address in Sri Lanka" required></textarea>
+      <button type="submit">PLACE MY ORDER →</button>
+    </form>
+
+    <p id="orderMessage"></p>
+  </div>
+</section>
+
+<section class="brand-message">
+  <p>MAX STYLE</p>
+  <h2>YOUR STYLE.<br>YOUR IDENTITY.</h2>
+  <span>STYLE WITHOUT LIMITS</span>
 </section>
 
 <footer>
-  <h2>MAX STYLE</h2>
+  <h2>MAX <span>STYLE</span></h2>
   <p>STYLE WITHOUT LIMITS</p>
-  <p>© 2026 MAX STYLE. All Rights Reserved.</p>
   <p>Sri Lanka 🇱🇰 | Prices in LKR</p>
+  <p>© 2026 MAX STYLE. All Rights Reserved.</p>
 </footer>
 
 <script src="app.js"></script>
