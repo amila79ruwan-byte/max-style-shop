@@ -13,6 +13,7 @@ function saveCart() {
 function loadCart() {
   try {
     const saved = JSON.parse(localStorage.getItem("maxStyleCart") || "[]");
+
     cart = Array.isArray(saved) ? saved.filter(item =>
       item &&
       typeof item.name === "string" &&
@@ -20,7 +21,13 @@ function loadCart() {
       Number(item.price) > 0 &&
       Number.isInteger(Number(item.quantity)) &&
       Number(item.quantity) > 0
-    ) : [];
+    ).map(item => ({
+      name: item.name,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      size: item.size || "Not selected",
+      color: item.color || "Not selected"
+    })) : [];
   } catch {
     cart = [];
   }
@@ -44,8 +51,7 @@ function updateCart() {
   let total = 0;
 
   cart.forEach((item, index) => {
-    const subtotal = item.price * item.quantity;
-    total += subtotal;
+    total += item.price * item.quantity;
 
     const div = document.createElement("div");
     div.className = "cart-item";
@@ -53,8 +59,13 @@ function updateCart() {
     const name = document.createElement("strong");
     name.textContent = item.name;
 
+    const details = document.createElement("p");
+    details.textContent =
+      "Size: " + item.size + " | Colour: " + item.color;
+
     const price = document.createElement("p");
-    price.textContent = "Rs. " + formatPrice(subtotal);
+    price.textContent =
+      "Rs. " + formatPrice(item.price * item.quantity);
 
     const minus = document.createElement("button");
     minus.type = "button";
@@ -74,7 +85,7 @@ function updateCart() {
     remove.textContent = "Remove";
     remove.onclick = () => removeItem(index);
 
-    div.append(name, price, minus, quantity, plus, remove);
+    div.append(name, details, price, minus, quantity, plus, remove);
     cartItems.appendChild(div);
   });
 
@@ -101,23 +112,37 @@ function removeItem(index) {
 
 document.querySelectorAll(".add-cart").forEach(button => {
   button.addEventListener("click", () => {
+    const product = button.closest(".product");
+    const size = product.querySelector(".product-size").value;
+    const color = product.querySelector(".product-color").value;
     const name = button.dataset.name;
     const price = Number(button.dataset.price);
+
+    if (!size || !color) {
+      alert("Please select your Size and Colour first.");
+      return;
+    }
 
     if (!name || !Number.isFinite(price) || price <= 0) {
       alert("Product information is invalid.");
       return;
     }
 
-    const existing = cart.find(item => item.name === name);
+    const existing = cart.find(item =>
+      item.name === name &&
+      item.size === size &&
+      item.color === color
+    );
 
     if (existing) {
       existing.quantity++;
     } else {
       cart.push({
-        name: name,
-        price: price,
-        quantity: 1
+        name,
+        price,
+        quantity: 1,
+        size,
+        color
       });
     }
 
@@ -150,17 +175,11 @@ orderForm.addEventListener("submit", async event => {
     )
   };
 
-  if (!order.customerName || !order.phone || !order.address) {
-    alert("Please complete all delivery details.");
-    return;
-  }
-
   const message = document.getElementById("orderMessage");
   const submitButton = orderForm.querySelector("button[type='submit']");
 
   submitButton.disabled = true;
   submitButton.textContent = "SENDING...";
-
   message.textContent = "";
 
   try {
@@ -176,7 +195,8 @@ orderForm.addEventListener("submit", async event => {
       throw new Error(result.message || "Order failed");
     }
 
-    message.textContent = "Thank you! Your order has been received.";
+    message.textContent =
+      "Thank you! Your order has been received.";
 
     cart = [];
     updateCart();
