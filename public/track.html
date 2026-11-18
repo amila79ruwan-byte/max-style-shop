@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track your order - Max Style</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,'Noto Sans Sinhala',sans-serif;background:#f5f5f5;color:#111;padding:16px;max-width:520px;margin:auto}
+h1{font-size:22px;margin-bottom:12px}
+.box{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px}
+input,button{font:inherit;font-size:16px;padding:12px;border-radius:8px;border:1px solid #ccc;width:100%}
+button{background:#111;color:#f3d27a;border:0;font-weight:700;margin-top:8px}
+.steps{list-style:none;margin-top:12px}
+.steps li{padding:8px 0;border-bottom:1px solid #eee;color:#999}
+.steps li.done{color:#111;font-weight:700}
+.items{margin:12px 0 0 18px;color:#444;font-size:15px}
+.muted{color:#666;font-size:14px;margin-top:8px}
+.msg{color:#c62828;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>Track your order</h1>
+<div class="box">
+  <input id="code" placeholder="Order code (e.g. MS-1001)" autocapitalize="characters">
+  <button id="go">Check status</button>
+  <div class="msg" id="err"></div>
+</div>
+<div class="box" id="result" style="display:none">
+  <b id="ocode"></b>
+  <ol class="steps" id="steps"></ol>
+  <ul class="items" id="items"></ul>
+  <div class="muted" id="total"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const STEPS=[["received","Received"],["confirmed","Confirmed"],["packed","Packed"],["out","Out for delivery"],["delivered","Delivered"]];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money=n=>Number(n).toLocaleString("en-US");
+
+async function check(){
+  $("#err").textContent="";
+  const code=$("#code").value.trim().toUpperCase();
+  const r=await fetch("/api/orders?code="+encodeURIComponent(code));
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){$("#err").textContent=d.error||"Something went wrong. Please try again.";$("#result").style.display="none";return;}
+  const idx=STEPS.findIndex(s=>s[0]===d.status);
+  $("#ocode").textContent="Order "+d.code;
+  $("#steps").innerHTML=d.status==="cancelled"
+    ?'<li class="done">Cancelled</li>'
+    :STEPS.map((s,i)=>'<li class="'+(i<=idx?"done":"")+'">'+s[1]+"</li>").join("");
+  $("#items").innerHTML=d.items.map(i=>"<li>"+esc(i.name)+(i.size?" ("+esc(i.size)+")":"")+" x"+i.qty+"</li>").join("");
+  $("#total").textContent="Total: Rs. "+money(d.total);
+  $("#result").style.display="block";
+}
+$("#go").onclick=check;
+$("#code").addEventListener("keydown",e=>{if(e.key==="Enter")check();});
+</script>
+</body>
+</html>
