@@ -24,7 +24,7 @@ function toast(t){
 function ensureModal(){
   if($("#pmodal"))return;
   const css=document.createElement("style");
-  css.textContent=".pm{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;display:none;align-items:flex-end;justify-content:center}.pm.on{display:flex}.pm-box{background:#fff;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px;position:relative}.pm-img{width:100%;aspect-ratio:3/4;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--gold);overflow:hidden}.pm-img img{width:100%;height:100%;object-fit:cover}.pm h2{font-size:20px;margin:12px 0 4px}.pm-price{font-weight:700;color:var(--gold-d);font-size:18px}.pm-desc{color:#444;font-size:15px;margin:10px 0;white-space:pre-line}.pm-lbl{font-weight:700;margin:14px 0 6px;font-size:14px}.pm-opts{display:flex;flex-wrap:wrap;gap:8px}.pm-opt{min-width:44px;padding:9px 12px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:14px;font-weight:600}.pm-opt.on{background:#111;color:#fff;border-color:#111}.pm table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}.pm td,.pm th{border:1px solid var(--line);padding:6px;text-align:center}.pm-link{background:none;border:0;text-decoration:underline;color:#555;padding:0;margin-top:8px;font-size:13px;width:auto}.pm-q{display:flex;align-items:center;gap:12px;margin-top:14px}.pm-q button{width:36px;height:36px;border:1px solid #111;background:#fff;border-radius:6px;font-size:18px;color:#111}.pm-add{width:100%;margin-top:14px;padding:14px;background:#111;color:#fff;border:0;border-radius:10px;font-weight:700;font-size:16px}.pm-x{position:absolute;right:12px;top:10px;background:none;border:0;font-size:26px;color:#111;width:auto;padding:0}";
+  css.textContent=".pm{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;display:none;align-items:flex-end;justify-content:center}.pm.on{display:flex}.pm-box{background:#fff;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px;position:relative}.pm-img{width:100%;aspect-ratio:3/4;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--gold);overflow:hidden}.pm-img img{width:100%;height:100%;object-fit:cover}.pm h2{font-size:20px;margin:12px 0 4px}.pm-price{font-weight:700;color:var(--gold-d);font-size:18px}.pm-desc{color:#444;font-size:15px;margin:10px 0;white-space:pre-line}.pm-lbl{font-weight:700;margin:14px 0 6px;font-size:14px}.pm-opts{display:flex;flex-wrap:wrap;gap:8px}.pm-opt{min-width:44px;padding:9px 12px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:14px;font-weight:600}.pm-opt.on{background:#111;color:#fff;border-color:#111}.pm-dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid #999;vertical-align:middle;margin-right:6px}.pm table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}.pm td,.pm th{border:1px solid var(--line);padding:6px;text-align:center}.pm-link{background:none;border:0;text-decoration:underline;color:#555;padding:0;margin-top:8px;font-size:13px;width:auto}.pm-q{display:flex;align-items:center;gap:12px;margin-top:14px}.pm-q button{width:36px;height:36px;border:1px solid #111;background:#fff;border-radius:6px;font-size:18px;color:#111}.pm-add{width:100%;margin-top:14px;padding:14px;background:#111;color:#fff;border:0;border-radius:10px;font-weight:700;font-size:16px}.pm-x{position:absolute;right:12px;top:10px;background:none;border:0;font-size:26px;color:#111;width:auto;padding:0}";
   document.head.appendChild(css);
   const m=document.createElement("div");m.id="pmodal";m.className="pm";
   m.innerHTML='<div class="pm-box" id="pmBox"></div>';
@@ -51,11 +51,18 @@ function openDetail(id){
   const p=PRODUCTS.find(x=>x.id==id);if(!p)return;
   detail=p;dSize="";dColor="";dQty=1;dChart=false;
   if(p.sizes.length===1)dSize=p.sizes[0];
-  if(p.colorList.length===1)dColor=p.colorList[0];
+  if(p.colorList.length===1)dColor=p.colorList[0].name;
   renderDetail();
+  if(!(history.state&&history.state.pm))history.pushState({pm:1},"");
   $("#pmodal").classList.add("on");
 }
-function closeDetail(){const m=$("#pmodal");if(m)m.classList.remove("on");}
+function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=null;}
+// Closing the popup: the back button closes the popup first, not the whole page.
+function closeDetail(){
+  if(history.state&&history.state.pm){history.back();}else{hideModal();}
+}
+window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();});
+
 function renderDetail(){
   const p=detail;
   const img=p.image?'<img src="'+p.image+'" alt="">':esc(p.name.charAt(0));
@@ -68,7 +75,7 @@ function renderDetail(){
     +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
     +(p.colorList.length
       ?'<div class="pm-lbl">Color'+(dColor?': '+esc(dColor):'')+'</div><div class="pm-opts">'
-        +p.colorList.map(c=>'<button class="pm-opt'+(dColor===c?' on':'')+'" data-kind="color" data-val="'+esc(c)+'">'+esc(c)+'</button>').join("")+'</div>'
+        +p.colorList.map(c=>'<button class="pm-opt'+(dColor===c.name?' on':'')+'" data-kind="color" data-val="'+esc(c.name)+'"><i class="pm-dot" style="background:'+esc(c.hex)+'"></i>'+esc(c.name)+'</button>').join("")+'</div>'
       :'')
     +(p.sizes.length
       ?'<div class="pm-lbl">Size'+(dSize?': '+esc(dSize):'')+'</div><div class="pm-opts">'
@@ -160,7 +167,7 @@ fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();
   PRODUCTS=l.map(p=>({...p,
     image:p.has_image?"/api/image?id="+p.id+"&v="+p.updated:"",
     sizes:p.sizes?String(p.sizes).split(",").map(s=>s.replace(/[^\w.\-\/ ]/g,"").trim()).filter(Boolean):[],
-    colorList:listOf(p.colors),
+    colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
     desc:p.description||"",
     chart:p.size_chart||""}));
   status="ok";renderGrid();renderCart();
