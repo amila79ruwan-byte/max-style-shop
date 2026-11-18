@@ -67,14 +67,29 @@ $$("[data-cat]").forEach(e=>e.addEventListener("click",()=>setCat(e.dataset.cat)
 $("#wishBtn").onclick=()=>{cat="all";term="";onlyWish=!onlyWish;renderGrid();go("shop");};
 $("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();};
 $("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
-$("#order").onclick=()=>{
-  const name=$("#name").value.trim(),phone=$("#phone").value.trim(),addr=$("#addr").value.trim(),ks=keys(),m=$("#msg");
+
+$("#order").onclick=async()=>{
+  const name=$("#name").value.trim(),phone=$("#phone").value.trim(),phone2=$("#phone2").value.trim(),district=$("#district").value,addr=$("#addr").value.trim(),ks=keys(),m=$("#msg");
+  m.style.color="#c62828";
   if(!ks.length){m.textContent="Add at least one item first.";return;}
-  if(!name||!phone||!addr){m.textContent="Please fill in your name, phone number and address.";return;}
-  const lines=ks.map(k=>{const p=PRODUCTS.find(x=>x.id==k.split("|")[0]),s=k.split("|")[1];return p.name+(s?" ("+s+")":"")+" x"+cart[k]+" = Rs. "+fmt(p.price*cart[k]);});
-  const text="New order - Max Style\n"+lines.join("\n")+"\nTotal: Rs. "+$("#total").textContent+"\nName: "+name+"\nPhone: "+phone+"\nAddress: "+addr;
-  m.style.color="#1a7f37";m.textContent="Order ready. Opening WhatsApp…";
-  window.open("https://wa.me/"+WHATSAPP+"?text="+encodeURIComponent(text),"_blank");
+  if(!name||!phone||!district||!addr){m.textContent="Please fill in your name, phone number, district and address.";return;}
+  m.style.color="#1a7f37";m.textContent="Placing your order…";
+  const items=ks.map(k=>({id:k.split("|")[0],size:k.split("|")[1]||"",qty:cart[k]}));
+  let d={};
+  try{
+    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,phone1:phone,phone2,district,address:addr,items})});
+    d=await r.json();
+    if(!r.ok){m.style.color="#c62828";m.textContent=d.error||"Could not place order. Please try again.";return;}
+  }catch(e){m.style.color="#c62828";m.textContent="Network error. Please try again.";return;}
+
+  const lines=d.lines.map(l=>l.name+(l.size?" ("+l.size+")":"")+" x"+l.qty+" = Rs. "+fmt(l.price*l.qty));
+  const text="New order "+d.code+" - Max Style\n"+lines.join("\n")+"\nTotal: Rs. "+fmt(d.total)+"\nName: "+name+"\nPhone: "+phone+(phone2?" / "+phone2:"")+"\nDistrict: "+district+"\nAddress: "+addr;
+  cart={};saveCart();renderCart();
+  ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
+  $("#district").value="";
+  m.style.color="#1a7f37";
+  m.innerHTML="Order "+d.code+" placed! Your tracking code is <b>"+d.code+"</b>. "
+    +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener">Send to WhatsApp</a>';
 };
 
 renderGrid();renderCart();
