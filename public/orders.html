@@ -60,7 +60,7 @@ async function load(){
       <div><b>${esc(o.name)}</b> · ${esc(o.district)}</div>
       <div class="muted">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}</div>
       <div class="muted">${esc(o.address)}</div>
-      <ul class="items">${o.items.map(i=>`<li>${esc(i.name)}${i.size?" ("+esc(i.size)+")":""} x${i.qty}</li>`).join("")}</ul>
+      <ul class="items">${o.items.map(i=>`<li>${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?" ["+esc(i.color)+"]":""} x${i.qty}</li>`).join("")}</ul>
       <div class="row"><b>Rs. ${money(o.total)}</b>
         <select onchange="setStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select>
       </div>
