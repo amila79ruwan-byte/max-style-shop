@@ -1,1 +1,119 @@
-<img src="1042795727_1794864022407312.jpg" alt="MAX STYLE Logo" class="site-logo">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Discover men's and women's fashion at MAX STYLE Sri Lanka.">
+  <title>MAX STYLE | Style Without Limits</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <img src="1042795727_1794864022407312.jpg"
+         alt="MAX STYLE Logo"
+         class="site-logo">
+  </div>
+
+  <button id="cartButton" onclick="document.getElementById('cart').scrollIntoView({behavior:'smooth'})">
+    🛒 Cart (<span id="cartCount">0</span>)
+  </button>
+</header>
+
+<nav class="nav">
+  <a href="#home">HOME</a>
+  <a href="#men">MEN</a>
+  <a href="#women">WOMEN</a>
+  <a href="#products">SHOP</a>
+  <a href="#contact">CONTACT</a>
+</nav>
+
+<main>
+  <section class="hero" id="home">
+    <div class="hero-content">
+      <p>NEW COLLECTION 2026</p>
+      <h1>STYLE WITHOUT LIMITS</h1>
+      <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
+      <a href="#products" class="shop-button">SHOP NOW →</a>
+    </div>
+  </section>
+
+  <section class="categories">
+    <h2>SHOP BY CATEGORY</h2>
+    <div class="category-grid">
+      <a href="#men" class="category-card">
+        <h3>MEN'S FASHION</h3>
+        <p>Explore Collection →</p>
+      </a>
+      <a href="#women" class="category-card">
+        <h3>WOMEN'S FASHION</h3>
+        <p>Explore Collection →</p>
+      </a>
+    </div>
+  </section>
+
+  <section id="products">
+    <h2>OUR COLLECTION</h2>
+
+    <section id="men">
+      <h3>MEN'S COLLECTION</h3>
+      <div class="product-grid">
+        <div class="product-card">
+          <h3>Men's T-Shirt</h3>
+          <p>Rs. 2,500</p>
+          <button onclick="addToCart('Men\\'s T-Shirt',2500)">ADD TO CART</button>
+        </div>
+        <div class="product-card">
+          <h3>Men's Shirt</h3>
+          <p>Rs. 3,500</p>
+          <button onclick="addToCart('Men\\'s Shirt',3500)">ADD TO CART</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="women">
+      <h3>WOMEN'S COLLECTION</h3>
+      <div class="product-grid">
+        <div class="product-card">
+          <h3>Women's Dress</h3>
+          <p>Rs. 4,500</p>
+          <button onclick="addToCart('Women\\'s Dress',4500)">ADD TO CART</button>
+        </div>
+        <div class="product-card">
+          <h3>Women's Top</h3>
+          <p>Rs. 2,000</p>
+          <button onclick="addToCart('Women\\'s Top',2000)">ADD TO CART</button>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <section id="cart">
+    <h2>YOUR SHOPPING CART</h2>
+    <div id="cartItems"></div>
+    <h3>Total: Rs. <span id="cartTotal">0</span></h3>
+  </section>
+
+  <section id="checkout">
+    <h2>CHECKOUT</h2>
+    <form id="checkoutForm">
+      <input type="text" id="customerName" placeholder="Your Name" required>
+      <input type="tel" id="customerPhone" placeholder="Phone Number" required>
+      <textarea id="customerAddress" placeholder="Delivery Address" required></textarea>
+      <button type="submit">PLACE ORDER</button>
+    </form>
+  </section>
+</main>
+
+<footer id="contact">
+  <h2>MAX STYLE</h2>
+  <p>STYLE WITHOUT LIMITS</p>
+  <p>Sri Lanka 🇱🇰 | All prices in LKR</p>
+  <p>© 2026 MAX STYLE. All Rights Reserved.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
