@@ -1,195 +1,147 @@
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Discover men's and women's fashion at MAX STYLE Sri Lanka.">
-  <title>MAX STYLE | Style Without Limits</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+let cart = JSON.parse(localStorage.getItem("maxStyleCart") || "[]");
 
-<header class="header">
-  <a href="#" class="logo">MAX <span>STYLE</span></a>
-  <p class="tagline">STYLE WITHOUT LIMITS</p>
-  <button id="cartButton" class="cart-btn">
-    🛍️ BAG (<span id="cartCount">0</span>)
-  </button>
-</header>
+const cartCount = document.getElementById("cartCount");
+const cartItems = document.getElementById("cartItems");
+const cartTotal = document.getElementById("cartTotal");
+const cartButton = document.getElementById("cartButton");
 
-<nav class="main-nav">
-  <a href="#">HOME</a>
-  <a href="#men">MEN</a>
-  <a href="#women">WOMEN</a>
-  <a href="#new-arrivals">NEW ARRIVALS</a>
-  <a href="#cart">MY BAG</a>
-</nav>
+function updateCart() {
+  cartCount.textContent = cart.reduce((sum, item) => sum + item.qty, 0);
 
-<section class="hero">
-  <div class="hero-content">
-    <p class="small-title">THE NEW COLLECTION · 2026</p>
-    <h1>STYLE<br><span>WITHOUT</span><br>LIMITS.</h1>
-    <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
-    <a href="#new-arrivals" class="shop-btn">DISCOVER COLLECTION →</a>
-  </div>
-</section>
+  cartItems.innerHTML = "";
+  let total = 0;
 
-<section class="categories">
-  <p class="section-label">EXPLORE YOUR STYLE</p>
-  <h2>SHOP BY CATEGORY</h2>
+  if (cart.length === 0) {
+    cartItems.textContent = "Your bag is empty.";
+  }
 
-  <div class="category-list">
-    <a href="#men" class="category-card">
-      <span>01</span>
-      <h3>MEN'S<br>COLLECTION</h3>
-      <p>EXPLORE →</p>
-    </a>
-    <a href="#women" class="category-card">
-      <span>02</span>
-      <h3>WOMEN'S<br>COLLECTION</h3>
-      <p>EXPLORE →</p>
-    </a>
-  </div>
-</section>
+  cart.forEach((item, index) => {
+    total += item.price * item.qty;
 
-<main id="new-arrivals">
-  <p class="section-label">FRESH ARRIVALS</p>
-  <h2>NEW COLLECTION</h2>
-  <p class="subtitle">Discover Your Style</p>
+    const div = document.createElement("div");
+    div.className = "cart-item";
 
-  <div class="products">
+    const details = document.createElement("p");
+    details.textContent =
+      `${item.name} | Size: ${item.size} | Colour: ${item.color} | Rs. ${item.price} × ${item.qty}`;
 
-    <article class="product" id="men">
-      <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=700" alt="Men's Classic T-Shirt">
-      <p class="product-category">MEN'S FASHION</p>
-      <h3>Classic T-Shirt</h3>
-      <p class="price">Rs. 2,500</p>
+    const minus = document.createElement("button");
+    minus.textContent = "−";
+    minus.onclick = () => changeQty(index, -1);
 
-      <label>SIZE</label>
-      <select class="product-size">
-        <option value="">Select Size</option>
-        <option>S</option><option>M</option>
-        <option>L</option><option>XL</option><option>XXL</option>
-      </select>
+    const plus = document.createElement("button");
+    plus.textContent = "+";
+    plus.onclick = () => changeQty(index, 1);
 
-      <label>COLOUR</label>
-      <select class="product-color">
-        <option value="">Select Colour</option>
-        <option>Black</option><option>White</option>
-        <option>Blue</option><option>Red</option>
-      </select>
+    const remove = document.createElement("button");
+    remove.textContent = "REMOVE";
+    remove.onclick = () => removeItem(index);
 
-      <button class="add-cart" data-name="Classic T-Shirt" data-price="2500">ADD TO BAG</button>
-    </article>
+    div.append(details, minus, plus, remove);
+    cartItems.appendChild(div);
+  });
 
-    <article class="product">
-      <img src="https://images.unsplash.com/photo-1542272604-787c3835535d?w=700" alt="Denim Jeans">
-      <p class="product-category">MEN'S FASHION</p>
-      <h3>Denim Jeans</h3>
-      <p class="price">Rs. 4,500</p>
+  cartTotal.textContent = total.toLocaleString("en-US");
+  localStorage.setItem("maxStyleCart", JSON.stringify(cart));
+}
 
-      <label>SIZE</label>
-      <select class="product-size">
-        <option value="">Select Size</option>
-        <option>S</option><option>M</option>
-        <option>L</option><option>XL</option><option>XXL</option>
-      </select>
+function changeQty(index, amount) {
+  cart[index].qty += amount;
 
-      <label>COLOUR</label>
-      <select class="product-color">
-        <option value="">Select Colour</option>
-        <option>Black</option><option>White</option>
-        <option>Blue</option><option>Red</option>
-      </select>
+  if (cart[index].qty <= 0) {
+    cart.splice(index, 1);
+  }
 
-      <button class="add-cart" data-name="Denim Jeans" data-price="4500">ADD TO BAG</button>
-    </article>
+  updateCart();
+}
 
-    <article class="product">
-      <img src="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=700" alt="Fashion Jacket">
-      <p class="product-category">MEN'S FASHION</p>
-      <h3>Premium Jacket</h3>
-      <p class="price">Rs. 6,500</p>
+function removeItem(index) {
+  cart.splice(index, 1);
+  updateCart();
+}
 
-      <label>SIZE</label>
-      <select class="product-size">
-        <option value="">Select Size</option>
-        <option>S</option><option>M</option>
-        <option>L</option><option>XL</option><option>XXL</option>
-      </select>
+document.querySelectorAll(".add-cart").forEach(button => {
+  button.addEventListener("click", () => {
+    const product = button.closest(".product");
+    const name = button.dataset.name;
+    const price = Number(button.dataset.price);
+    const size = product.querySelector(".product-size").value;
+    const color = product.querySelector(".product-color").value;
 
-      <label>COLOUR</label>
-      <select class="product-color">
-        <option value="">Select Colour</option>
-        <option>Black</option><option>White</option>
-        <option>Blue</option><option>Red</option>
-      </select>
+    if (!size || !color) {
+      alert("Please select Size and Colour!");
+      return;
+    }
 
-      <button class="add-cart" data-name="Premium Jacket" data-price="6500">ADD TO BAG</button>
-    </article>
+    const existing = cart.find(item =>
+      item.name === name &&
+      item.size === size &&
+      item.color === color
+    );
 
-    <article class="product" id="women">
-      <img src="https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=700" alt="Women's Fashion">
-      <p class="product-category">WOMEN'S FASHION</p>
-      <h3>Women's Style</h3>
-      <p class="price">Rs. 3,500</p>
+    if (existing) {
+      existing.qty++;
+    } else {
+      cart.push({ name, price, size, color, qty: 1 });
+    }
 
-      <label>SIZE</label>
-      <select class="product-size">
-        <option value="">Select Size</option>
-        <option>S</option><option>M</option>
-        <option>L</option><option>XL</option><option>XXL</option>
-      </select>
+    updateCart();
+    alert("Added to Bag successfully!");
+  });
+});
 
-      <label>COLOUR</label>
-      <select class="product-color">
-        <option value="">Select Colour</option>
-        <option>Black</option><option>White</option>
-        <option>Blue</option><option>Red</option>
-      </select>
+cartButton.addEventListener("click", () => {
+  document.getElementById("cart").scrollIntoView({
+    behavior: "smooth"
+  });
+});
 
-      <button class="add-cart" data-name="Women's Style" data-price="3500">ADD TO BAG</button>
-    </article>
+document.getElementById("orderForm").addEventListener("submit", async event => {
+  event.preventDefault();
 
-  </div>
-</main>
+  if (cart.length === 0) {
+    alert("Your bag is empty!");
+    return;
+  }
 
-<section class="cart-section" id="cart">
-  <p class="section-label">YOUR SELECTION</p>
-  <h2>SHOPPING BAG</h2>
+  const orderMessage = document.getElementById("orderMessage");
+  const submitButton = event.target.querySelector('button[type="submit"]');
 
-  <div id="cartItems">Your bag is empty.</div>
-  <h3>Total: Rs. <span id="cartTotal">0</span></h3>
+  const order = {
+    customerName: document.getElementById("customerName").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    address: document.getElementById("address").value.trim(),
+    items: cart,
+    total: cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+  };
 
-  <div class="order-details">
-    <h2>CHECKOUT</h2>
-    <p>Enter your delivery details to place your order.</p>
+  submitButton.disabled = true;
+  orderMessage.textContent = "Sending your order...";
 
-    <form id="orderForm">
-      <input id="customerName" type="text" placeholder="Full Name" required>
-      <input id="phone" type="tel" placeholder="Sri Lankan Phone Number" required>
-      <textarea id="address" placeholder="Delivery Address in Sri Lanka" required></textarea>
-      <button type="submit">PLACE MY ORDER →</button>
-    </form>
+  try {
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(order)
+    });
 
-    <p id="orderMessage"></p>
-  </div>
-</section>
+    const result = await response.json();
 
-<section class="brand-message">
-  <p>MAX STYLE</p>
-  <h2>YOUR STYLE.<br>YOUR IDENTITY.</h2>
-  <span>STYLE WITHOUT LIMITS</span>
-</section>
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Order failed");
+    }
 
-<footer>
-  <h2>MAX <span>STYLE</span></h2>
-  <p>STYLE WITHOUT LIMITS</p>
-  <p>Sri Lanka 🇱🇰 | Prices in LKR</p>
-  <p>© 2026 MAX STYLE. All Rights Reserved.</p>
-</footer>
+    orderMessage.textContent = "Your order has been received. Thank you!";
+    cart = [];
+    updateCart();
+    event.target.reset();
 
-<script src="app.js"></script>
-</body>
-</html>
+  } catch (error) {
+    orderMessage.textContent = "Order could not be submitted. Please try again.";
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
+updateCart();
