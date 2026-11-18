@@ -63,7 +63,7 @@
   <button class="mi" data-cat="kids">Kids</button>
   <button class="mi" data-cat="all">New Arrivals</button>
   <button class="mi off" data-cat="all">Offers</button>
-  <div class="ml"><a href="#contact" data-close>Contact Us</a><a href="#contact" data-close>Delivery and Returns</a></div>
+  <div class="ml"><a href="#contact" data-close>Contact Us</a><a href="#contact" data-close>Delivery and Returns</a><a href="track.html">Track my order</a></div>
 </aside>
 
 <aside class="dr" id="cart" aria-label="Cart">
@@ -72,7 +72,9 @@
   <div class="co">
     <div class="tot"><span>Total</span><span>Rs. <span id="total">0</span></span></div>
     <input id="name" placeholder="Your name" autocomplete="name">
-    <input id="phone" placeholder="Phone number" inputmode="tel" autocomplete="tel">
+    <input id="phone" placeholder="Phone number (WhatsApp)" inputmode="tel" autocomplete="tel">
+    <input id="phone2" placeholder="Alternate phone number (optional)" inputmode="tel" autocomplete="tel">
+    <select id="district" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px"><option value="">Select district</option><option>Colombo</option><option>Gampaha</option><option>Kalutara</option><option>Kandy</option><option>Matale</option><option>Nuwara Eliya</option><option>Galle</option><option>Matara</option><option>Hambantota</option><option>Jaffna</option><option>Kilinochchi</option><option>Mannar</option><option>Vavuniya</option><option>Mullaitivu</option><option>Batticaloa</option><option>Ampara</option><option>Trincomalee</option><option>Kurunegala</option><option>Puttalam</option><option>Anuradhapura</option><option>Polonnaruwa</option><option>Badulla</option><option>Monaragala</option><option>Ratnapura</option><option>Kegalle</option></select>
     <textarea id="addr" rows="3" placeholder="Delivery address"></textarea>
     <button class="cta" id="order">Place order</button>
     <div id="msg" role="status"></div>
