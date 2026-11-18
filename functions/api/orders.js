@@ -5,6 +5,7 @@ const DISTRICTS = ["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya
 const clean = s => String(s || "").trim().slice(0, 200);
 const codeOf = id => "MS-" + (1000 + Number(id));
 const phoneOk = p => /^[0-9+\s-]{9,15}$/.test(p);
+const listOf = v => String(v || "").split(",").map(s => s.trim()).filter(Boolean);
 
 export async function onRequestPost({ request, env }) {
   const b = await request.json();
@@ -16,17 +17,20 @@ export async function onRequestPost({ request, env }) {
   if (!cartIn.length || cartIn.length > 50) return J({ error: "Your cart is empty." }, 400);
 
   // Prices are read from the database here. The browser's prices are never trusted.
-  const { results: products } = await env.DB.prepare("SELECT id,name,price,sizes FROM products").all();
+  const { results: products } = await env.DB.prepare("SELECT id,name,price,sizes,colors FROM products").all();
   const lines = [];
   let total = 0;
   for (const it of cartIn) {
     const p = products.find(x => x.id == it.id);
     if (!p) return J({ error: "A product in your cart is no longer available." }, 400);
     const qty = Math.min(Math.max(parseInt(it.qty, 10) || 0, 1), 20);
-    const sizeList = String(p.sizes || "").split(",").map(s => s.trim()).filter(Boolean);
+    const sizeList = listOf(p.sizes);
     const size = sizeList.length ? clean(it.size) : "";
     if (sizeList.length && !sizeList.includes(size)) return J({ error: "Please select a size for " + p.name + "." }, 400);
-    lines.push({ name: p.name, size, qty, price: p.price });
+    const colorList = listOf(p.colors);
+    const color = colorList.length ? clean(it.color) : "";
+    if (colorList.length && !colorList.includes(color)) return J({ error: "Please select a color for " + p.name + "." }, 400);
+    lines.push({ name: p.name, size, color, qty, price: p.price });
     total += p.price * qty;
   }
 
