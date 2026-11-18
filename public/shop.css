@@ -27,6 +27,7 @@ header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid 
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px}
 .tile{position:relative;aspect-ratio:7/8;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;color:#fff;font-size:22px;font-weight:700;padding-bottom:20px;border:0;text-shadow:0 1px 6px rgba(0,0,0,.45)}
 .tile span{position:relative}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
 .tile.w{background:#a9c5d3}.tile.m{background:#e3bccb}
 .tile.k{grid-column:1/3;aspect-ratio:5/2;background:#e8d98f;align-items:center;padding:0}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 10px}
