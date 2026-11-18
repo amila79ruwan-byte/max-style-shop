@@ -1,147 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MAX STYLE Sri Lanka - Men's and Women's Fashion">
+  <title>MAX STYLE | Style Without Limits</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
 
-let cart = JSON.parse(localStorage.getItem("maxStyleCart") || "[]");
+  <header class="header">
+    <div class="logo">
+      <h1>MAX STYLE</h1>
+      <p>STYLE WITHOUT LIMITS</p>
+    </div>
 
-const cartCount = document.getElementById("cartCount");
-const cartItems = document.getElementById("cartItems");
-const cartTotal = document.getElementById("cartTotal");
-const cartButton = document.getElementById("cartButton");
+    <button id="cartButton" type="button">
+      🛒 Cart (<span id="cartCount">0</span>)
+    </button>
+  </header>
 
-function updateCart() {
-  cartCount.textContent = cart.reduce((sum, item) => sum + item.qty, 0);
+  <nav class="navbar">
+    <a href="#home">Home</a>
+    <a href="#men">Men</a>
+    <a href="#women">Women</a>
+    <a href="#products">Shop</a>
+    <a href="#cart">Cart</a>
+  </nav>
 
-  cartItems.innerHTML = "";
-  let total = 0;
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-content">
+        <p>NEW COLLECTION 2026</p>
+        <h2>STYLE WITHOUT LIMITS</h2>
+        <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
+        <a href="#products" class="shop-button">SHOP NOW →</a>
+      </div>
+    </section>
 
-  if (cart.length === 0) {
-    cartItems.textContent = "Your bag is empty.";
-  }
+    <section class="categories" id="products">
+      <h2>SHOP BY CATEGORY</h2>
 
-  cart.forEach((item, index) => {
-    total += item.price * item.qty;
+      <div class="category-grid">
+        <a href="#men" class="category-card">
+          <h3>MEN'S FASHION</h3>
+          <p>Explore Collection</p>
+        </a>
 
-    const div = document.createElement("div");
-    div.className = "cart-item";
+        <a href="#women" class="category-card">
+          <h3>WOMEN'S FASHION</h3>
+          <p>Explore Collection</p>
+        </a>
+      </div>
+    </section>
 
-    const details = document.createElement("p");
-    details.textContent =
-      `${item.name} | Size: ${item.size} | Colour: ${item.color} | Rs. ${item.price} × ${item.qty}`;
+    <section class="products-section" id="men">
+      <h2>MEN'S COLLECTION</h2>
 
-    const minus = document.createElement("button");
-    minus.textContent = "−";
-    minus.onclick = () => changeQty(index, -1);
+      <div class="product-grid">
+        <article class="product">
+          <div class="product-image">👕</div>
+          <h3>Men's Casual T-Shirt</h3>
+          <p>Rs. 2,500</p>
 
-    const plus = document.createElement("button");
-    plus.textContent = "+";
-    plus.onclick = () => changeQty(index, 1);
+          <select class="product-size">
+            <option value="">Select Size</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+          </select>
 
-    const remove = document.createElement("button");
-    remove.textContent = "REMOVE";
-    remove.onclick = () => removeItem(index);
+          <select class="product-color">
+            <option value="">Select Colour</option>
+            <option value="Black">Black</option>
+            <option value="White">White</option>
+            <option value="Blue">Blue</option>
+          </select>
 
-    div.append(details, minus, plus, remove);
-    cartItems.appendChild(div);
-  });
+          <button class="add-cart" data-name="Men's Casual T-Shirt" data-price="2500">
+            ADD TO BAG
+          </button>
+        </article>
+      </div>
+    </section>
 
-  cartTotal.textContent = total.toLocaleString("en-US");
-  localStorage.setItem("maxStyleCart", JSON.stringify(cart));
-}
+    <section class="products-section" id="women">
+      <h2>WOMEN'S COLLECTION</h2>
 
-function changeQty(index, amount) {
-  cart[index].qty += amount;
+      <div class="product-grid">
+        <article class="product">
+          <div class="product-image">👗</div>
+          <h3>Women's Fashion Dress</h3>
+          <p>Rs. 4,500</p>
 
-  if (cart[index].qty <= 0) {
-    cart.splice(index, 1);
-  }
+          <select class="product-size">
+            <option value="">Select Size</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+          </select>
 
-  updateCart();
-}
+          <select class="product-color">
+            <option value="">Select Colour</option>
+            <option value="Black">Black</option>
+            <option value="White">White</option>
+            <option value="Red">Red</option>
+          </select>
 
-function removeItem(index) {
-  cart.splice(index, 1);
-  updateCart();
-}
+          <button class="add-cart" data-name="Women's Fashion Dress" data-price="4500">
+            ADD TO BAG
+          </button>
+        </article>
+      </div>
+    </section>
 
-document.querySelectorAll(".add-cart").forEach(button => {
-  button.addEventListener("click", () => {
-    const product = button.closest(".product");
-    const name = button.dataset.name;
-    const price = Number(button.dataset.price);
-    const size = product.querySelector(".product-size").value;
-    const color = product.querySelector(".product-color").value;
+    <section class="cart-section" id="cart">
+      <h2>YOUR SHOPPING BAG</h2>
 
-    if (!size || !color) {
-      alert("Please select Size and Colour!");
-      return;
-    }
+      <div id="cartItems">
+        Your bag is empty.
+      </div>
 
-    const existing = cart.find(item =>
-      item.name === name &&
-      item.size === size &&
-      item.color === color
-    );
+      <h3>Total: Rs. <span id="cartTotal">0</span></h3>
 
-    if (existing) {
-      existing.qty++;
-    } else {
-      cart.push({ name, price, size, color, qty: 1 });
-    }
+      <h2>CHECKOUT</h2>
 
-    updateCart();
-    alert("Added to Bag successfully!");
-  });
-});
+      <form id="orderForm">
+        <input type="text" id="customerName" placeholder="Your Full Name" required>
 
-cartButton.addEventListener("click", () => {
-  document.getElementById("cart").scrollIntoView({
-    behavior: "smooth"
-  });
-});
+        <input type="tel" id="phone" placeholder="Phone Number" required>
 
-document.getElementById("orderForm").addEventListener("submit", async event => {
-  event.preventDefault();
+        <textarea id="address" placeholder="Delivery Address in Sri Lanka" required></textarea>
 
-  if (cart.length === 0) {
-    alert("Your bag is empty!");
-    return;
-  }
+        <button type="submit">PLACE ORDER</button>
 
-  const orderMessage = document.getElementById("orderMessage");
-  const submitButton = event.target.querySelector('button[type="submit"]');
+        <p id="orderMessage"></p>
+      </form>
+    </section>
+  </main>
 
-  const order = {
-    customerName: document.getElementById("customerName").value.trim(),
-    phone: document.getElementById("phone").value.trim(),
-    address: document.getElementById("address").value.trim(),
-    items: cart,
-    total: cart.reduce((sum, item) => sum + item.price * item.qty, 0)
-  };
+  <footer>
+    <h2>MAX STYLE</h2>
+    <p>STYLE WITHOUT LIMITS</p>
+    <p>Fashion for Men & Women | Sri Lanka 🇱🇰</p>
+    <p>© 2026 MAX STYLE. All Rights Reserved.</p>
+  </footer>
 
-  submitButton.disabled = true;
-  orderMessage.textContent = "Sending your order...";
-
-  try {
-    const response = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(order)
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Order failed");
-    }
-
-    orderMessage.textContent = "Your order has been received. Thank you!";
-    cart = [];
-    updateCart();
-    event.target.reset();
-
-  } catch (error) {
-    orderMessage.textContent = "Order could not be submitted. Please try again.";
-  } finally {
-    submitButton.disabled = false;
-  }
-});
-
-updateCart();
+  <script src="app.js"></script>
+</body>
+</html>
