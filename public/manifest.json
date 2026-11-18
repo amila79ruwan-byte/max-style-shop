@@ -1,0 +1,15 @@
+{
+  "name": "Max Style",
+  "short_name": "Max Style",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "1042795727_1794864022407312~2.jpg",
+      "sizes": "any",
+      "type": "image/jpeg"
+    }
+  ]
+}
