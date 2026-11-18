@@ -27,7 +27,8 @@ export async function onRequestPost({ request, env }) {
     const sizeList = listOf(p.sizes);
     const size = sizeList.length ? clean(it.size) : "";
     if (sizeList.length && !sizeList.includes(size)) return J({ error: "Please select a size for " + p.name + "." }, 400);
-    const colorList = listOf(p.colors);
+    // Colors may be stored as "Name" or "Name:#hex". Only the name is compared.
+    const colorList = listOf(p.colors).map(c => c.split(":")[0].trim());
     const color = colorList.length ? clean(it.color) : "";
     if (colorList.length && !colorList.includes(color)) return J({ error: "Please select a color for " + p.name + "." }, 400);
     lines.push({ name: p.name, size, color, qty, price: p.price });
