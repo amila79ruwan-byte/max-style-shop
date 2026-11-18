@@ -19,20 +19,17 @@ header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid 
 .ib{background:none;border:0;width:40px;height:40px;display:grid;place-items:center;position:relative}
 .ib svg{width:26px;height:26px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .logo{display:flex;justify-content:center;align-items:center;height:48px}
-.logo img{max-height:44px;width:auto;object-fit:contain}
-.logo b{font-size:24px;letter-spacing:1px;font-weight:700;display:none}
+.logo b{font-size:24px;letter-spacing:1px;font-weight:700}
 .logo b span{color:var(--gold)}
-.logo.nologo b{display:block}
 .hr{display:flex;gap:2px}
 .badge{position:absolute;top:0;right:0;min-width:18px;height:18px;border-radius:9px;background:var(--gold);color:#111;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
 .sbar{display:none;padding:8px 12px;border-bottom:1px solid var(--line)}
 .sbar.on{display:block}
 .sbar input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:15px}
-.banner{background:linear-gradient(120deg,#111 0,#2a2108 60%,#4a3a0c);color:#fff;padding:34px 20px;min-height:170px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
-.banner small{color:#f3d27a;font-size:13px;letter-spacing:1px}
-.banner h1{font-size:34px;line-height:1.05;margin:6px 0 4px;font-weight:700}
-.banner p{font-size:15px;opacity:.85;margin-bottom:14px}
-.cta{align-self:flex-start;background:var(--gold);color:#111;font-weight:700;border:0;padding:10px 20px;border-radius:6px;font-size:15px}
+.banner{background:#000;color:#fff;padding:20px 16px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.banner img{width:min(78%,300px);height:auto;border-radius:12px}
+.banner p{font-size:15px;opacity:.9}
+.cta{background:var(--gold);color:#111;font-weight:700;border:0;padding:10px 24px;border-radius:6px;font-size:15px}
 .title{text-align:center;font-size:26px;font-weight:700;margin:26px 0 14px;display:flex;justify-content:center;align-items:center;gap:10px}
 .title::before{content:"";width:4px;height:26px;background:var(--red)}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px}
@@ -57,168 +54,4 @@ header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid 
 .chips button{white-space:nowrap;border:1px solid var(--line);background:#fff;padding:8px 16px;border-radius:20px;font-size:14px}
 .chips button.on{background:#111;color:#fff;border-color:#111}
 footer{background:var(--soft);margin-top:26px;padding:22px 16px;font-size:14px;color:var(--mute);text-align:center}
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none}
-.ov.on{display:block}
-.dr{position:fixed;top:0;bottom:0;width:min(88%,380px);background:#fff;z-index:50;overflow-y:auto;transition:transform .25s}
-#menu{left:0;transform:translateX(-100%)}#menu.on{transform:none}
-#cart{right:0;transform:translateX(100%)}#cart.on{transform:none}
-.dh{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:700;font-size:18px}
-.mi{display:block;width:calc(100% - 28px);margin:8px 14px 0;background:var(--soft);padding:14px;font-weight:700;text-align:left;border:0;font-size:16px}
-.mi.off{background:var(--red);color:#fff}
-.ml{padding:14px;display:flex;flex-direction:column;gap:14px;color:var(--mute);font-size:16px;border-top:1px solid var(--line);margin-top:16px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:15px}
-.qty{display:flex;align-items:center;gap:8px}
-.qty button{width:28px;height:28px;border:1px solid var(--ink);background:#fff;border-radius:4px}
-.co{padding:14px}
-.co .tot{font-size:18px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between}
-.co input,.co textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px}
-.co .cta{width:100%;text-align:center}
-#msg{margin-top:10px;font-size:14px;color:var(--red)}
-.fab{position:fixed;right:12px;bottom:80px;z-index:20;width:52px;height:52px;border-radius:10px;background:#25d366;display:grid;place-items:center}
-.fab svg{width:30px;height:30px;fill:#fff}
-.bn{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);height:58px}
-.bn button{background:none;border:0;display:grid;place-items:center;position:relative}
-.bn svg{width:26px;height:26px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.bn .badge{top:8px;right:calc(50% - 26px)}
-@media(min-width:760px){.pgrid{grid-template-columns:repeat(4,1fr);max-width:1000px;margin:auto}.tiles{max-width:800px;margin:auto}.empty{grid-column:1/5}}
-@media(prefers-reduced-motion:reduce){.dr{transition:none}html{scroll-behavior:auto}}
-</style>
-</head>
-<body>
-<div class="promo">Sign up and get 10% off on your first order</div>
-
-<header>
-  <button class="ib" id="menuBtn" aria-label="Open menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-  <a class="logo nologo" href="#top" id="logo">
-    <img src="logo.png" alt="Max Style" onerror="this.remove()" onload="document.getElementById('logo').classList.remove('nologo')">
-    <b>MAX <span>STYLE</span></b>
-  </a>
-  <div class="hr">
-    <button class="ib" id="cartBtn" aria-label="Open cart"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0"/></svg><span class="badge" id="cnt">0</span></button>
-    <button class="ib" id="searchBtn" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
-  </div>
-</header>
-<div class="sbar" id="sbar"><input id="q" type="search" placeholder="Search products"></div>
-
-<main id="top">
-  <div class="banner">
-    <small>NEW COLLECTION 2026</small>
-    <h1>Style without limits</h1>
-    <p>ඔබේ විලාසිතාවට අලුත් හැඩයක්!</p>
-    <button class="cta" data-go="shop">Shop now</button>
-  </div>
-
-  <h2 class="title">NEW ARRIVALS</h2>
-  <div class="tiles">
-    <button class="tile w" data-cat="women"><span>Women</span></button>
-    <button class="tile m" data-cat="men"><span>Men</span></button>
-    <button class="tile k" data-cat="kids"><span>Kids</span></button>
-  </div>
-
-  <h2 class="title" id="shop">OUR COLLECTION</h2>
-  <div class="chips" id="chips">
-    <button class="on" data-cat="all">All</button><button data-cat="women">Women</button><button data-cat="men">Men</button><button data-cat="kids">Kids</button>
-  </div>
-  <div class="pgrid" id="grid"></div>
-</main>
-
-<footer id="contact">
-  <b>Max Style</b><br>Style without limits.<br>Order on WhatsApp for fast delivery.
-</footer>
-
-<a class="fab" id="wa" href="#" target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.2 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.6c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.3z"/></svg></a>
-
-<nav class="bn">
-  <button data-go="top" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/></svg></button>
-  <button id="wishBtn" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg><span class="badge" id="wcnt">0</span></button>
-  <button id="cartBtn2" aria-label="Cart"><svg viewBox="0 0 24 24"><path d="M2 4h3l2.5 11h11L21 7H6M9 20h.01M17 20h.01"/></svg><span class="badge" id="cnt2">0</span></button>
-  <button data-go="contact" aria-label="Contact"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></button>
-</nav>
-
-<div class="ov" id="ov"></div>
-
-<aside class="dr" id="menu" aria-label="Menu">
-  <div class="dh">Menu <button class="ib" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>
-  <button class="mi" data-cat="women">Womens</button>
-  <button class="mi" data-cat="men">Mens</button>
-  <button class="mi" data-cat="kids">Kids</button>
-  <button class="mi" data-cat="all">New Arrivals</button>
-  <button class="mi off" data-cat="all">Offers</button>
-  <div class="ml"><a href="#contact" data-close>Contact Us</a><a href="#contact" data-close>Delivery and Returns</a></div>
-</aside>
-
-<aside class="dr" id="cart" aria-label="Cart">
-  <div class="dh">Your cart <button class="ib" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>
-  <div id="items"></div>
-  <div class="co">
-    <div class="tot"><span>Total</span><span>Rs. <span id="total">0</span></span></div>
-    <input id="name" placeholder="Your name" autocomplete="name">
-    <input id="phone" placeholder="Phone number" inputmode="tel" autocomplete="tel">
-    <textarea id="addr" rows="3" placeholder="Delivery address"></textarea>
-    <button class="cta" id="order">Place order</button>
-    <div id="msg" role="status"></div>
-  </div>
-</aside>
-
-<script>
-const WHATSAPP = "94722555929";
-let PRODUCTS = [];
-const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const fmt=n=>Number(n).toLocaleString("en-US");
-let cart={}, wish=new Set(), cat="all", term="", onlyWish=false;
-$("#wa").href="https://wa.me/"+WHATSAPP;
-
-function renderGrid(){
-  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&(cat==="all"||p.cat===cat)&&p.name.toLowerCase().includes(term));
-  $("#grid").innerHTML=list.length?list.map(p=>`
-   <article class="card">
-    <span class="new">NEW</span>
-    <button class="heart ${wish.has(p.id)?"on":""}" onclick="toggleWish(${p.id})" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></button>
-    <div class="ph">${p.image?`<img src="${p.image}" alt="" loading="lazy">`:p.name.charAt(0)}</div>
-    <div class="info"><h3>${p.name}</h3><div class="price">Rs. ${fmt(p.price)}</div><button class="add" onclick="add(${p.id})">Add to cart</button></div>
-   </article>`).join(""):`<p class="empty">${onlyWish?"Your wishlist is empty. Tap the heart on a product to save it.":"No products found."}</p>`;
-  $$("#chips button").forEach(b=>b.classList.toggle("on",b.dataset.cat===cat));
-}
-function toggleWish(id){wish.has(id)?wish.delete(id):wish.add(id);$("#wcnt").textContent=wish.size;renderGrid();}
-function add(id){cart[id]=(cart[id]||0)+1;renderCart();openDr("cart");}
-function chg(id,d){cart[id]=(cart[id]||0)+d;if(cart[id]<=0)delete cart[id];renderCart();}
-function renderCart(){
-  const ids=Object.keys(cart).filter(id=>PRODUCTS.find(x=>x.id==id));
-  $("#items").innerHTML=ids.length?ids.map(id=>{const p=PRODUCTS.find(x=>x.id==id);
-    return `<div class="row"><span>${p.name}</span><span class="qty"><button onclick="chg(${id},-1)" aria-label="Remove one">−</button>${cart[id]}<button onclick="chg(${id},1)" aria-label="Add one">+</button></span><b>Rs. ${fmt(p.price*cart[id])}</b></div>`}).join("")
-    :'<p style="padding:18px 14px;color:var(--mute)">Your cart is empty. Add something from the collection.</p>';
-  const t=ids.reduce((s,id)=>s+PRODUCTS.find(x=>x.id==id).price*cart[id],0), n=ids.reduce((s,id)=>s+cart[id],0);
-  $("#total").textContent=fmt(t);$("#cnt").textContent=n;$("#cnt2").textContent=n;
-}
-function openDr(id){closeDr();$("#"+id).classList.add("on");$("#ov").classList.add("on");}
-function closeDr(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
-function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
-function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
-
-$("#menuBtn").onclick=()=>openDr("menu");
-$("#cartBtn").onclick=$("#cartBtn2").onclick=()=>openDr("cart");
-$("#ov").onclick=closeDr;
-$$("[data-close]").forEach(e=>e.addEventListener("click",closeDr));
-$$("[data-go]").forEach(e=>e.addEventListener("click",()=>go(e.dataset.go)));
-$$("[data-cat]").forEach(e=>e.addEventListener("click",()=>setCat(e.dataset.cat)));
-$("#wishBtn").onclick=()=>{cat="all";term="";onlyWish=!onlyWish;renderGrid();go("shop");};
-$("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();};
-$("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
-$("#order").onclick=()=>{
-  const name=$("#name").value.trim(),phone=$("#phone").value.trim(),addr=$("#addr").value.trim(),ids=Object.keys(cart),m=$("#msg");
-  if(!ids.length){m.textContent="Add at least one item first.";return;}
-  if(!name||!phone||!addr){m.textContent="Please fill in your name, phone number and address.";return;}
-  const lines=ids.map(id=>{const p=PRODUCTS.find(x=>x.id==id);return `${p.name} x${cart[id]} = Rs. ${fmt(p.price*cart[id])}`});
-  const text=`New order - Max Style\n${lines.join("\n")}\nTotal: Rs. ${$("#total").textContent}\nName: ${name}\nPhone: ${phone}\nAddress: ${addr}`;
-  m.style.color="#1a7f37";m.textContent="Order ready. Opening WhatsApp…";
-  window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`,"_blank");
-};
-
-renderGrid();renderCart();
-fetch("/api/products").then(r=>r.json()).then(l=>{
-  PRODUCTS=l.map(p=>({...p,image:p.has_image?`/api/image?id=${p.id}&v=${p.updated}`:""}));
-  renderGrid();renderCart();
-}).catch(()=>{});
-</script>
-</body>
-</html>
+.ov{position:fixed;inset:0;background:rgba(0,0,0,
