@@ -179,6 +179,8 @@ const STATUSES=[["received","Received"],["confirmed","Confirmed"],["packed","Pac
 const waNum=p=>{let d=String(p||"").replace(/\D/g,"");if(d.startsWith("0"))d="94"+d.slice(1);return d;};
 const money=n=>Number(n).toLocaleString("en-US");
 const dt=t=>t?new Date(t).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}):"";
+// Expected delivery: 5 working days (Mon-Fri) after the order date.
+const deliveryText=t=>{const d=new Date(t);let n=0;while(n<5){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)n++;}return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Colombo"});};
 async function loadOrders(){
   const r=await fetch("/api/orders",{headers:hdr()});
   if(!r.ok){$("#olist").innerHTML='<p class="msg">Could not load orders.</p>';return;}
@@ -190,6 +192,7 @@ async function loadOrders(){
     const msg="Hi "+o.name+", your Max Style order "+o.code+" is now: "+label+". Thank you!";
     return `<div class="ocard">
       <div class="orow"><span class="code">${esc(o.code)}</span><span class="muted">${esc(dt(o.created))}</span></div>
+      <div class="muted">Delivery within 5 working days, by ${esc(deliveryText(o.created))}</div>
       <div><b>${esc(o.name)}</b> · ${esc(o.district)}</div>
       <div class="muted">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}</div>
       <div class="muted">${esc(o.address)}</div>
@@ -214,7 +217,7 @@ function printBill(id){
   const rows=o.items.map(i=>`<tr><td>${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?"<br><small>"+esc(i.color)+"</small>":""}</td><td>${i.qty}</td><td style="text-align:right">${i.price?"Rs. "+money(i.price*i.qty):""}</td></tr>`).join("");
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill ${esc(o.code)}</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.tot{font-size:18px;font-weight:700;text-align:right;margin-top:10px}.btn{margin-top:20px;padding:12px;width:100%;background:#111;color:#f3d27a;border:0;border-radius:8px;font-weight:700;font-size:16px}@media print{.btn{display:none}}</style></head><body>
 <h1>Max Style</h1><div class="sub">Style without limits · 0722555929</div>
-<p style="margin-top:14px"><b>Bill: ${esc(o.code)}</b><br><span class="sub">${esc(dt(o.created))}</span></p>
+<p style="margin-top:14px"><b>Bill: ${esc(o.code)}</b><br><span class="sub">${esc(dt(o.created))}</span><br><span class="sub">Delivery within 5 working days, by ${esc(deliveryText(o.created))}</span></p>
 <p><b>${esc(o.name)}</b><br><span class="sub">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}<br>${esc(o.address)}<br>${esc(o.district)}</span></p>
 <table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Price</th></tr>${rows}</table>
 <div class="tot">Total: Rs. ${money(o.total)}</div>
@@ -226,6 +229,7 @@ function printBill(id){
   w.document.write(html);w.document.close();
 }
 
+// Home screen with two buttons: Products / Orders
 // The phone back button goes back to the home screen (instead of leaving the page).
 function showView(v,fromHistory){
   $("#home").style.display=v==="home"?"block":"none";
