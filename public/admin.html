@@ -68,7 +68,8 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
   <div id="home">
     <button id="gProducts" style="padding:18px;font-size:18px;margin-bottom:12px">Products</button>
     <button id="gOrders" style="padding:18px;font-size:18px;margin-bottom:12px">Orders</button>
-    <button id="gStats" style="padding:18px;font-size:18px">Stats</button>
+    <button id="gStats" style="padding:18px;font-size:18px;margin-bottom:12px">Stats</button>
+    <button id="gBanners" style="padding:18px;font-size:18px">Banners</button>
   </div>
 
   <div id="vProducts" style="display:none">
@@ -146,6 +147,23 @@ M|96|70"></textarea>
     <div class="hint" style="margin:6px 0 0">Cancelled orders are not counted. Days change at 00:00 (Sri Lanka time).</div>
     <div id="sbody" style="margin-top:10px"></div>
   </div>
+  </div>
+
+  <div id="vBanners" style="display:none">
+  <button class="sec" data-back>← Back</button>
+  <div class="box">
+    <div class="orow"><b>Home banners</b><span class="muted" id="bcount"></span></div>
+    <div class="hint" style="margin:6px 0 10px">Photos change automatically on the home page. Use wide photos (about 16:7, e.g. 1600 x 700). Up to 6.</div>
+    <input id="bfile" type="file" accept="image/*">
+    <img id="bprev" alt="" style="width:100%;display:none;border-radius:8px;margin:6px 0">
+    <input id="btext" maxlength="120" placeholder="Text on the banner (optional)">
+    <input id="blink" maxlength="300" placeholder="Link when tapped (optional)">
+    <input id="bpos" type="number" value="0" placeholder="Order (0 = first)">
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:8px"><input id="bactive" type="checkbox" checked style="width:auto;margin:0"> Show on the website</label>
+    <button id="badd">Add banner</button>
+    <div class="msg" id="bmsg"></div>
+  </div>
+  <div class="box" id="blist"></div>
   </div>
 </div>
 
@@ -399,15 +417,76 @@ function printBill(id){
   w.document.write(html);w.document.close();
 }
 
-// Home screen with three buttons: Products / Orders / Stats
+// ---- Home banners (slideshow on the shop's home page) ----
+let bImage="";
+async function bShrink(file){
+  const img=await createImageBitmap(file);
+  const s=Math.min(1,1200/img.width);
+  const c=document.createElement("canvas");
+  c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return c.toDataURL("image/jpeg",0.82);
+}
+async function loadBanners(){
+  const r=await fetch("/api/banners",{headers:hdr()});
+  const list=r.ok?await r.json():[];
+  $("#bcount").textContent=list.length+" / 6";
+  $("#blist").innerHTML=list.map(b=>`<div class="item" style="display:block" data-bid="${b.id}">
+      <img src="${b.image}" alt="" style="width:100%;aspect-ratio:16/7;object-fit:cover;border-radius:8px;background:#eee;margin-bottom:6px">
+      <input class="bt" value="${esc(b.text)}" maxlength="120" placeholder="Text">
+      <input class="bl" value="${esc(b.link)}" maxlength="300" placeholder="Link">
+      <input class="bp" type="number" value="${esc(b.pos)}" placeholder="Order">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:8px"><input class="ba" type="checkbox" ${b.active?"checked":""} style="width:auto;margin:0"> Show on the website</label>
+      <button class="edt" data-bsave="${b.id}">Save</button>
+      <button class="del" data-bdel="${b.id}">Delete</button>
+      <div class="msg" data-bm="${b.id}"></div></div>`).join("")||'<p class="muted">No banners yet.</p>';
+}
+async function bannerSave(id){
+  const box=document.querySelector(`[data-bid="${id}"]`), msg=document.querySelector(`[data-bm="${id}"]`);
+  const r=await fetch("/api/banners",{method:"POST",headers:hdr(),body:JSON.stringify({id:Number(id),
+    text:box.querySelector(".bt").value,link:box.querySelector(".bl").value,
+    pos:box.querySelector(".bp").value,active:box.querySelector(".ba").checked})});
+  const d=await r.json().catch(()=>({}));
+  msg.style.color=r.ok?"#1a7f37":"#c62828";
+  msg.textContent=r.ok?"Saved ✓":(d.error||"Could not save");
+}
+async function bannerDel(id){
+  if(!confirm("Delete this banner?"))return;
+  await fetch("/api/banners?id="+id,{method:"DELETE",headers:hdr()});
+  loadBanners();
+}
+$("#blist").addEventListener("click",e=>{
+  if(e.target.dataset.bsave)bannerSave(e.target.dataset.bsave);
+  if(e.target.dataset.bdel)bannerDel(e.target.dataset.bdel);
+});
+$("#bfile").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  bImage=await bShrink(f);$("#bprev").src=bImage;$("#bprev").style.display="block";
+};
+$("#badd").onclick=async()=>{
+  const msg=$("#bmsg");msg.style.color="#c62828";msg.textContent="";
+  if(!bImage){msg.textContent="Choose a photo first.";return;}
+  msg.style.color="#111";msg.textContent="Adding…";
+  const r=await fetch("/api/banners",{method:"POST",headers:hdr(),body:JSON.stringify({image:bImage,
+    text:$("#btext").value,link:$("#blink").value,pos:$("#bpos").value,active:$("#bactive").checked})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){msg.textContent=d.error||"Could not add";return;}
+  bImage="";$("#bfile").value="";$("#bprev").style.display="none";
+  $("#btext").value="";$("#blink").value="";$("#bpos").value="0";
+  msg.style.color="#1a7f37";msg.textContent="Added ✓";loadBanners();
+};
+
+// Home screen with four buttons: Products / Orders / Stats / Banners
 // The phone back button goes back to the home screen (instead of leaving the page).
 function showView(v,fromHistory){
   $("#home").style.display=v==="home"?"block":"none";
   $("#vProducts").style.display=v==="products"?"block":"none";
   $("#vOrders").style.display=v==="orders"?"block":"none";
   $("#vStats").style.display=v==="stats"?"block":"none";
+  $("#vBanners").style.display=v==="banners"?"block":"none";
   window.scrollTo(0,0);
   if(v==="stats")loadStats();
+  if(v==="banners")loadBanners();
   if(fromHistory)return;
   if(v==="home"){ if(history.state&&history.state.av)history.back(); }
   else if(!(history.state&&history.state.av===v))history.pushState({av:v},"");
@@ -416,6 +495,7 @@ window.addEventListener("popstate",e=>showView((e.state&&e.state.av)||"home",tru
 $("#gProducts").onclick=()=>showView("products");
 $("#gOrders").onclick=()=>showView("orders");
 $("#gStats").onclick=()=>showView("stats");
+$("#gBanners").onclick=()=>showView("banners");
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showView("home"));
 
 $("#go").onclick=()=>{pw=$("#pw").value;login();};
