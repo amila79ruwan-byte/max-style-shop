@@ -73,6 +73,7 @@ function closeDetail(){
 // Back button: close the success page, the product popup, My orders, then the cart/menu drawer, and only then leave the page.
 window.addEventListener("popstate",()=>{
   if($("#okModal")){$("#okModal").remove();return;}
+  if(checkoutShown()){hideCheckout();return;}
   const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else if($("#moModal"))removeMyOrders();else hideDrawers();
 });
 
@@ -135,9 +136,10 @@ function renderCart(){
     const p=prodOf(k),{size,color}=parseKey(k);
     total+=p.price*cart[k];n+=cart[k];
     const opts=[size?"Size: "+size:"",color?"Color: "+color:""].filter(Boolean).join(" · ");
-    return '<div class="row"><span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button onclick="chg(\''+k+'\',-1)" aria-label="Remove one">−</button>'+cart[k]+'<button onclick="chg(\''+k+'\',1)" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
+    const thumb=p.image?'<img src="'+p.image+'" alt="" style="width:52px;height:64px;object-fit:cover;border-radius:6px;flex:none">':'';
+    return '<div class="row">'+thumb+'<span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button onclick="chg(\''+k+'\',-1)" aria-label="Remove one">−</button>'+cart[k]+'<button onclick="chg(\''+k+'\',1)" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
   }).join(""):'<p class="note">Your cart is empty. Add something from the collection.</p>';
-  $("#total").textContent=fmt(total);$("#cnt").textContent=n;$("#cnt2").textContent=n;
+  $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;$("#cnt2").textContent=n;
   saveCart();
 }
 // Side drawers (menu / cart) also use browser history, so the phone back button closes them.
@@ -164,6 +166,57 @@ $("#wishBtn").onclick=()=>{cat="all";term="";onlyWish=!onlyWish;renderGrid();go(
 $("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();};
 $("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
 
+// ---- Totals: first order discount, delivery and cash on delivery fee ----
+// The browser shows this breakdown; the server calculates the final total again when the order is placed.
+let firstFlag=null,firstFor="";
+function calcTotals(){
+  const sub=keys().reduce((s,k)=>{const p=prodOf(k);return s+(p?p.price*cart[k]:0);},0);
+  const disc=firstFlag===true?Math.round(sub*0.10):0;
+  const after=sub-disc;
+  const del=after>=7000?0:350;
+  const cod=150;
+  return {sub,disc,after,del,cod,total:after+del+cod};
+}
+function updateSummary(){
+  const box=$("#sumBox"),t=calcTotals();
+  if(!box)return;
+  const row=(l,v,extra)=>'<div style="display:flex;justify-content:space-between;margin:4px 0'+(extra||'')+'"><span>'+l+'</span><span>'+v+'</span></div>';
+  box.innerHTML=row("Items","Rs. "+fmt(t.sub))
+    +(t.disc?row("First order discount (10%)","- Rs. "+fmt(t.disc),";color:#1a7f37"):"")
+    +row("Delivery",t.del?"Rs. "+fmt(t.del):"Free")
+    +row("Cash on delivery fee","Rs. "+fmt(t.cod))
+    +'<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total</span><span>Rs. '+fmt(t.total)+'</span></div>';
+  const t2=$("#total2");if(t2)t2.textContent=fmt(t.total);
+}
+// Ask the server if this phone number is eligible for the first order discount (only true/false is returned).
+function checkFirst(){
+  const digits=($("#phone").value||"").replace(/\D/g,"");
+  if(digits.length<9){firstFlag=null;firstFor="";updateSummary();return;}
+  if(digits===firstFor)return;
+  firstFor=digits;
+  fetch("/api/orders?firstcheck="+encodeURIComponent(digits)).then(r=>r.json()).then(d=>{
+    if(firstFor===digits){firstFlag=!!d.first;updateSummary();}
+  }).catch(()=>{});
+}
+$("#phone").addEventListener("input",checkFirst);
+
+// Cart -> Next opens the delivery details page. The phone back button returns to the cart page.
+function checkoutShown(){const c=$("#checkout");return !!c&&c.style.display==="block";}
+function openCheckout(){
+  if(!keys().length){toast("Add at least one item first");return;}
+  hideDrawers();
+  $("#checkout").style.display="block";
+  if(history.state&&history.state.dr)history.replaceState({co:1},"");
+  else if(!(history.state&&history.state.co))history.pushState({co:1},"");
+  window.scrollTo(0,0);
+}
+function hideCheckout(){const c=$("#checkout");if(c)c.style.display="none";}
+function closeCheckout(){
+  if(history.state&&history.state.co){history.back();}else{hideCheckout();}
+}
+$("#toCheckout").onclick=openCheckout;
+$("#coBack").onclick=closeCheckout;
+
 $("#order").onclick=async()=>{
   const name=$("#name").value.trim(),phone=$("#phone").value.trim(),phone2=$("#phone2").value.trim(),district=$("#district").value,addr=$("#addr").value.trim(),ks=keys(),m=$("#msg");
   m.style.color="#c62828";
@@ -181,7 +234,7 @@ $("#order").onclick=async()=>{
   const lines=d.lines.map(l=>l.name+(l.size?" ("+l.size+")":"")+(l.color?" ["+l.color+"]":"")+" x"+l.qty+" = Rs. "+fmt(l.price*l.qty));
   const text="New order "+d.code+" - Max Style\n"+lines.join("\n")+"\nTotal: Rs. "+fmt(d.total)+"\nName: "+name+"\nPhone: "+phone+(phone2?" / "+phone2:"")+"\nDistrict: "+district+"\nAddress: "+addr;
   const bill={code:d.code,created:Date.now(),name,phone1:phone,phone2,district,address:addr,
-    items:d.lines.map(l=>({name:l.name,size:l.size,color:l.color,qty:l.qty,amount:l.price*l.qty})),total:d.total};
+    items:d.lines.map(l=>({name:l.name,size:l.size,color:l.color,qty:l.qty,amount:l.price*l.qty})),total:d.total,subtotal:d.subtotal,discount:d.discount,delivery:d.delivery,codFee:d.codFee};
   saveMyOrder(bill);
   cart={};saveCart();renderCart();
   ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
@@ -193,6 +246,7 @@ $("#order").onclick=async()=>{
 // Order success page: shows the order code, delivery date, bill and a way back to the main page.
 function showOrderDone(b,text){
   hideDrawers();
+  hideCheckout();
   let box=$("#okModal");
   if(!box){
     box=document.createElement("div");box.id="okModal";
@@ -209,7 +263,9 @@ function showOrderDone(b,text){
     +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener" style="padding:13px;border-radius:8px;background:#25d366;color:#fff;font-weight:700;text-decoration:none;font-size:16px">Send to WhatsApp</a>'
     +'<button onclick="closeOrderDone()" style="padding:13px;border:0;background:#eee;color:#111;border-radius:8px;font-weight:700;font-size:16px">Back to main page</button>'
     +'</div>';
-  if(!(history.state&&history.state.ok))history.pushState({ok:1},"");
+  if(history.state&&history.state.ok){/* already on the success page */}
+  else if(history.state&&history.state.co)history.replaceState({ok:1},"");
+  else history.pushState({ok:1},"");
   window.scrollTo(0,0);
 }
 function closeOrderDone(){
@@ -243,7 +299,7 @@ function billHtml(b){
    +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span><br><span class="sub">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</span></p>'
    +(b.name?'<p><b>'+esc(b.name)+'</b><br><span class="sub">'+esc(b.phone1)+(b.phone2?' / '+esc(b.phone2):'')+'<br>'+esc(b.address)+'<br>'+esc(b.district)+'</span></p>':'')
    +'<table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr>'+rows+'</table>'
-   +'<div class="tot">Total: Rs. '+fmt(b.total)+'</div><p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
+   +(b.subtotal!==undefined?'<div class="sub">Items: Rs. '+fmt(b.subtotal)+(b.discount?' · First order discount: -Rs. '+fmt(b.discount):'')+' · Delivery: '+(b.delivery?'Rs. '+fmt(b.delivery):'Free')+' · COD fee: Rs. '+fmt(b.codFee)+'</div>':'')+'<div class="tot">Total: Rs. '+fmt(b.total)+'</div><p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
 }
 function downloadBill(b){
   const blob=new Blob([billHtml(b)],{type:"text/html"});
