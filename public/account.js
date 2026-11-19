@@ -112,7 +112,9 @@ function purchases() {
     '<div class="ac-ord"><b>' + esc(b.code) + '</b> · Rs. ' + fmt(b.total) + (b.status ? ' · ' + esc(STL[b.status] || b.status) : '')
     + '<br><span class="ac-muted">' + esc(dateTxt(b.created)) + '</span><br>'
     + '<span class="ac-muted">Delivery within 5 working days, by ' + esc(deliveryText(b.created)) + '</span><br>'
-    + '<button data-bill="' + i + '">Download bill</button></div>').join("") + '</div>';
+    + '<button data-bill="' + i + '">Download bill</button>'
+    + ((P && (b.status === 'packed' || b.status === 'out')) ? ' <button data-confirm="' + i + '">I received my order</button>' : '')
+    + '</div>').join("") + '</div>';
 }
 function settingsHtml() {
   if (!P) return '<div class="ac-card">Sign in to manage your details.</div><button class="ac-gold" data-act="goSignin">Sign Up or Sign in</button>';
@@ -154,13 +156,21 @@ function ensure() {
   if (!m) {
     m = document.createElement("div"); m.id = "accModal"; document.body.appendChild(m);
     m.addEventListener("click", e => {
-      const b = e.target.closest("[data-act],[data-bill]");
+      const b = e.target.closest("[data-act],[data-bill],[data-confirm]");
       if (!b || !m.contains(b)) return;
       if (b.hasAttribute("data-bill")) { const bill = curOrders[+b.getAttribute("data-bill")]; if (bill) downloadBill(bill); return; }
+      if (b.hasAttribute("data-confirm")) { const o = curOrders[+b.getAttribute("data-confirm")]; if (o) confirmOrder(o.code); return; }
       act(b.getAttribute("data-act"));
     });
   }
   return m;
+}
+
+// Customer marks an order as received.
+async function confirmOrder(code) {
+  const r = await post({ action: "confirm", token: getTok(), code: code });
+  if (!r.ok) { alert(r.d.error || "Could not confirm the order"); return; }
+  await loadProfile(); view = "purchases"; render();
 }
 
 // Moving to a sub-page adds a history entry, so the phone back button returns to the previous page.
