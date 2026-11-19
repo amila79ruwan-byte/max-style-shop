@@ -191,6 +191,8 @@ $("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
 let firstFlag=null,firstFor="";
 function calcTotals(){
   const sub=keys().reduce((s,k)=>{const p=prodOf(k);return s+(p?p.price*cart[k]:0);},0);
+  // Empty cart: everything is 0.
+  if(!sub)return {sub:0,disc:0,after:0,del:0,cod:0,total:0};
   const disc=firstFlag===true?Math.round(sub*0.10):0;
   const after=sub-disc;
   const del=after>=7000?0:350;
@@ -203,7 +205,7 @@ function updateSummary(){
   const row=(l,v,extra)=>'<div style="display:flex;justify-content:space-between;margin:4px 0'+(extra||'')+'"><span>'+l+'</span><span>'+v+'</span></div>';
   const html=row("Items","Rs. "+fmt(t.sub))
     +(t.disc?row("First order discount (10%)","- Rs. "+fmt(t.disc),";color:#1a7f37"):"")
-    +row("Delivery",t.del?"Rs. "+fmt(t.del):"Free")
+    +row("Delivery",!t.sub?"Rs. 0":t.del?"Rs. "+fmt(t.del):"Free")
     +row("Cash on delivery fee","Rs. "+fmt(t.cod))
     +'<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total</span><span>Rs. '+fmt(t.total)+'</span></div>';
   const box=$("#sumBox");if(box)box.innerHTML=html;
@@ -365,14 +367,22 @@ moBtn.onclick=()=>openMyOrders();
 $("#menu").appendChild(moBtn);
 
 
+// ---- Category circles: a product photo of that category inside each circle ----
+function renderCircs(){
+  $$(".circs button").forEach(b=>{
+    const c=b.dataset.cat;
+    const p=PRODUCTS.find(x=>x.image&&(c==="all"||x.cat===c));
+    if(p)b.style.backgroundImage='url("'+p.image+'")';
+  });
+}
+
 // ---- Auto-sliding products strip (moves by itself, pauses while touched) ----
-// Shows products that have feat_order 1-15 (from admin), in that order. If none are set, shows the first 15.
+// Admin picks the products (slider position 1-15). If none are picked, the first 15 products are shown.
 let featTimer=null;
 function renderFeatured(){
   const f=$("#feat");if(!f)return;
-  let list=PRODUCTS.filter(p=>Number(p.feat_order)>0)
-    .sort((a,b)=>Number(a.feat_order)-Number(b.feat_order)).slice(0,15);
-  if(!list.length)list=PRODUCTS.slice(0,15);
+  const picked=PRODUCTS.filter(p=>Number(p.feat_order)>0).sort((a,b)=>a.feat_order-b.feat_order).slice(0,15);
+  const list=picked.length?picked:PRODUCTS.slice(0,15);
   f.innerHTML=list.map(p=>'<div class="fi" onclick="openDetail('+p.id+')"><div class="fp">'+(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fn">'+esc(p.name)+'</div><div class="fr">Rs. '+fmt(p.price)+'</div></div>').join("");
   startFeat();
 }
@@ -403,5 +413,5 @@ fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();
     colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
     desc:p.description||"",
     chart:p.size_chart||""}));
-  status="ok";renderGrid();renderCart();renderFeatured();
+  status="ok";renderGrid();renderCart();renderFeatured();renderCircs();
 }).catch(()=>{status="error";renderGrid();});
