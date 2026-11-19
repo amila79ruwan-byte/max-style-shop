@@ -63,11 +63,26 @@
 #menu .ml a.trk:active{transform:scale(.95);background:#000}
 #menu > .mi:last-child{margin-bottom:14px}
 
+/* ===== Category circles ===== */
+.circs{display:flex;justify-content:space-around;align-items:center;gap:8px;padding:16px 10px 8px}
+.circs button{flex:none;width:min(21vw,84px);height:min(21vw,84px);border-radius:50%;border:2px solid var(--gold,#c9a24a);background:#111;color:#fff;font:inherit;font-size:12px;font-weight:700;line-height:1.15;padding:0;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:transform .15s,background .15s;-webkit-tap-highlight-color:transparent}
+.circs button:active{transform:scale(.92);background:#000}
+
+/* ===== Auto-sliding products strip ===== */
+.feat{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8px 12px 12px}
+.feat::-webkit-scrollbar{display:none}
+.feat .fi{flex:0 0 42%;max-width:190px;scroll-snap-align:start;background:#fff;border:1px solid #eee;border-radius:12px;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.feat .fi:active{transform:scale(.97)}
+.feat .fp{aspect-ratio:3/4;background:#eee;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--gold,#c9a24a);overflow:hidden}
+.feat .fp img{width:100%;height:100%;object-fit:cover;display:block}
+.feat .fn{font-size:13px;font-weight:600;padding:8px 8px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feat .fr{font-size:13px;font-weight:700;color:var(--gold-d,#8a6a1f);padding:2px 8px 9px}
+
 /* ===== Banner slideshow ===== */
 .banner{overflow:hidden;position:relative;width:100%}
 .banner .bn-track{display:flex;width:100%;transition:transform .6s ease;will-change:transform}
 .banner .bn-slide{flex:0 0 100%;min-width:100%;display:block}
-.banner .bn-slide img{width:100%;height:auto;display:block;max-height:none}
+.banner .bn-slide img{width:100%;height:auto;aspect-ratio:2.4/1;object-fit:cover;display:block;max-height:none}
 .banner .bn-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
 .banner .bn-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55)}
 .banner .bn-dots i.on{background:#fff}
@@ -95,14 +110,16 @@
     <div class="bn-dots" id="bnDots"></div>
   </div>
 
-  <h2 class="title">NEW ARRIVALS</h2>
-  <div class="tiles">
-    <button class="tile w" data-cat="women"><img src="41779449_1795005921595579.jpg" alt=""><span>Women</span></button>
-    <button class="tile m" data-cat="men"><img src="226417524_1795005988881598.jpg" alt=""><span>Men</span></button>
-    <button class="tile k" data-cat="kids"><img src="317669206_1795007572070883.jpg" alt=""><span>Kids</span></button>
+  <div class="circs">
+    <button data-cat="all"><span>New<br>Arrivals</span></button>
+    <button data-cat="women"><span>Women</span></button>
+    <button data-cat="men"><span>Men</span></button>
+    <button data-cat="kids"><span>Kids</span></button>
   </div>
 
-  <h2 class="title" id="shop">OUR COLLECTION</h2>
+  <div class="feat" id="feat"></div>
+
+  <div id="shop"></div>
   <div class="chips" id="chips">
     <button class="on" data-cat="all">All</button><button data-cat="women">Women</button><button data-cat="men">Men</button><button data-cat="kids">Kids</button><button data-cat="phone">Phone Accessories</button><button data-cat="toys">Toys</button><button data-cat="electric">Electrical</button><button data-cat="umbrella">Umbrellas</button><button data-cat="bags">Bags</button><button data-cat="school">School &amp; Books</button>
   </div>
