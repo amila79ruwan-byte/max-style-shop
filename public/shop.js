@@ -364,6 +364,33 @@ moBtn.textContent="My orders / Bills";
 moBtn.onclick=()=>openMyOrders();
 $("#menu").appendChild(moBtn);
 
+
+// ---- Auto-sliding products strip (moves by itself, pauses while touched) ----
+let featTimer=null;
+function renderFeatured(){
+  const f=$("#feat");if(!f)return;
+  const list=PRODUCTS.slice(0,15);
+  f.innerHTML=list.map(p=>'<div class="fi" onclick="openDetail('+p.id+')"><div class="fp">'+(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fn">'+esc(p.name)+'</div><div class="fr">Rs. '+fmt(p.price)+'</div></div>').join("");
+  startFeat();
+}
+function stopFeat(){if(featTimer){clearInterval(featTimer);featTimer=null;}}
+function startFeat(){
+  stopFeat();
+  const f=$("#feat");if(!f||f.children.length<2)return;
+  featTimer=setInterval(()=>{
+    const step=f.children[0].offsetWidth+10;
+    if(f.scrollLeft+f.clientWidth>=f.scrollWidth-4)f.scrollTo({left:0,behavior:"smooth"});
+    else f.scrollBy({left:step,behavior:"smooth"});
+  },2500);
+}
+(function(){
+  const f=$("#feat");if(!f)return;
+  let rt=null;
+  f.addEventListener("touchstart",()=>{stopFeat();clearTimeout(rt);},{passive:true});
+  f.addEventListener("touchend",()=>{clearTimeout(rt);rt=setTimeout(startFeat,3000);});
+  document.addEventListener("visibilitychange",()=>{document.hidden?stopFeat():startFeat();});
+})();
+
 $("#wcnt").textContent=wish.size;
 renderGrid();renderCart();
 fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();}).then(l=>{
@@ -373,5 +400,5 @@ fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();
     colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
     desc:p.description||"",
     chart:p.size_chart||""}));
-  status="ok";renderGrid();renderCart();
+  status="ok";renderGrid();renderCart();renderFeatured();
 }).catch(()=>{status="error";renderGrid();});
