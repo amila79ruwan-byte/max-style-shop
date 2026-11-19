@@ -52,6 +52,8 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .sc b{display:block;font-size:17px;margin:2px 0}
 .sh{font-weight:700;margin:14px 0 6px}
 .srow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
+.catb{display:flex;justify-content:space-between;align-items:center;padding:16px;font-size:16px;margin-bottom:10px}
+.catb span{background:#f3d27a;color:#111;border-radius:999px;padding:2px 12px;font-size:13px}
 </style>
 </head>
 <body>
@@ -72,13 +74,24 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
     <button id="gBanners" style="padding:18px;font-size:18px">Banners</button>
   </div>
 
-  <div id="vProducts" style="display:none">
+  <!-- Step 1: choose a category -->
+  <div id="vCats" style="display:none">
   <button class="sec" data-back>← Back</button>
+  <div class="box">
+    <b>Choose a category</b>
+    <div class="hint" style="margin:6px 0 12px">Tap a category to add or edit its products.</div>
+    <div id="clist"></div>
+  </div>
+  </div>
+
+  <!-- Step 2: products of the chosen category -->
+  <div id="vProducts" style="display:none">
+  <button class="sec" data-back>← Categories</button>
   <div class="box">
     <b id="ftitle">Add product</b><br><br>
     <input id="name" placeholder="Product name">
     <input id="price" type="number" inputmode="numeric" placeholder="Price (Rs.)">
-    <select id="cat"><option value="women">Women</option><option value="men">Men</option><option value="kids">Kids</option></select>
+    <select id="cat" style="display:none"></select>
     <input id="stock" type="number" inputmode="numeric" min="0" placeholder="Stock (how many available). Leave empty = not tracked">
     <select id="feat"></select>
     <div class="hint">Slider position 1-15 = shown in the moving strip on the home page, in that order. If another product already has the same number, it is removed from the slider. If no product has a number, the first 15 products are shown.</div>
@@ -107,7 +120,7 @@ M|96|70"></textarea>
   </div>
 
   <div class="box">
-    <b>Products</b>
+    <b id="ltitle">Products</b>
     <input id="psearch" type="search" placeholder="Search by code (MS-P0007) or name" style="margin-top:10px">
     <div class="muted" id="pcnt" style="margin-bottom:6px"></div>
     <div id="list"></div>
@@ -171,12 +184,17 @@ M|96|70"></textarea>
 
 <script>
 const $=s=>document.querySelector(s);
-let pw=sessionStorage.getItem("pw")||"", image="", editId=null, items=[];
+let pw=sessionStorage.getItem("pw")||"", image="", editId=null, items=[], curCat="women";
 const hdr=()=>({"content-type":"application/json","x-admin-password":pw});
 const DISTRICTS=["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle","Matara","Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu","Batticaloa","Ampara","Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa","Badulla","Monaragala","Ratnapura","Kegalle"];
 $("#oe_dist").innerHTML=DISTRICTS.map(d=>`<option>${d}</option>`).join("");
 // Slider position selector (1-15). Empty = not shown in the slider.
 $("#feat").innerHTML='<option value="">Slider position: not shown</option>'+Array.from({length:15},(_,i)=>`<option value="${i+1}">Slider position ${i+1}</option>`).join("");
+
+// Product categories (value used by the shop, label shown here)
+const CATS=[["women","Women"],["men","Men"],["kids","Kids"],["phone","Phone Accessories"],["toys","Toys"],["electric","Electrical Items"],["umbrella","Umbrellas"],["bags","Bags"],["school","School Items & Books"]];
+const catName=c=>(CATS.find(x=>x[0]===c)||[c,c])[1];
+$("#cat").innerHTML=CATS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
 
 // Automatic product code: made from the product id (id 7 -> MS-P0007).
 const pcode=id=>"MS-P"+String(id).padStart(4,"0");
@@ -216,27 +234,45 @@ async function login(){
 }
 async function load(){
   items=await (await fetch("/api/products")).json();
-  renderList();
+  renderList();renderCats();
 }
-// Product list with search (by code or name).
+
+// Step 1: category list with product counts
+function renderCats(){
+  const n={};
+  items.forEach(p=>{n[p.cat]=(n[p.cat]||0)+1;});
+  $("#clist").innerHTML=CATS.map(([v,l])=>`<button class="catb" data-c="${v}">${esc(l)}<span>${n[v]||0}</span></button>`).join("");
+}
+$("#clist").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-c]");if(!b)return;
+  curCat=b.dataset.c;
+  reset();
+  showView("products");
+});
+
+// Step 2: product list of the chosen category (search by code or name)
 function renderList(){
   const term=($("#psearch").value||"").trim().toLowerCase();
-  const list=items.filter(p=>!term
+  const inCat=items.filter(p=>p.cat===curCat);
+  const list=inCat.filter(p=>!term
     ||pcode(p.id).toLowerCase().includes(term)
     ||String(p.id)===term.replace(/^0+/,"")
     ||String(p.name).toLowerCase().includes(term));
-  $("#pcnt").textContent=term?(list.length+" of "+items.length+" products"):(items.length+" products");
+  $("#ltitle").textContent="Products · "+catName(curCat);
+  $("#pcnt").textContent=term?(list.length+" of "+inCat.length+" products"):(inCat.length+" products");
   $("#list").innerHTML=list.length?list.map(p=>`<div class="item">
     ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
-    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${esc(p.cat)}<br>${stockHtml(p.stock)}</div>
+    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")}<br>${stockHtml(p.stock)}</div>
     <button class="edt" onclick="edit(${p.id})">Edit</button>
-    <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products yet.")+"</p>";
+    <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products in this category yet.")+"</p>";
 }
 $("#psearch").addEventListener("input",renderList);
 function reset(){
   editId=null;image="";
-  ["#name","#price","#stock","#feat","#sizes","#colors","#desc","#chart","#file"].forEach(s=>$(s).value="");
-  $("#prev").style.display="none";$("#ftitle").textContent="Add product";$("#cancel").style.display="none";
+  ["#name","#price","#stock","#feat","#sizes","#colors","#desc","#chart","#file","#psearch"].forEach(s=>$(s).value="");
+  $("#cat").value=curCat;
+  $("#prev").style.display="none";$("#ftitle").textContent="Add product · "+catName(curCat);$("#cancel").style.display="none";
+  renderList();
   loadPhotos();
 }
 function edit(id){
@@ -486,15 +522,17 @@ $("#badd").onclick=async()=>{
   msg.style.color="#1a7f37";msg.textContent="Added ✓";loadBanners();
 };
 
-// Home screen with four buttons: Products / Orders / Stats / Banners
-// The phone back button goes back to the home screen (instead of leaving the page).
+// Screens: home -> (Products) categories -> products of one category. Also Orders / Stats / Banners.
+// The phone back button goes back one step (instead of leaving the page).
 function showView(v,fromHistory){
   $("#home").style.display=v==="home"?"block":"none";
+  $("#vCats").style.display=v==="cats"?"block":"none";
   $("#vProducts").style.display=v==="products"?"block":"none";
   $("#vOrders").style.display=v==="orders"?"block":"none";
   $("#vStats").style.display=v==="stats"?"block":"none";
   $("#vBanners").style.display=v==="banners"?"block":"none";
   window.scrollTo(0,0);
+  if(v==="cats"){editId=null;renderCats();}
   if(v==="stats")loadStats();
   if(v==="banners")loadBanners();
   if(fromHistory)return;
@@ -502,11 +540,13 @@ function showView(v,fromHistory){
   else if(!(history.state&&history.state.av===v))history.pushState({av:v},"");
 }
 window.addEventListener("popstate",e=>showView((e.state&&e.state.av)||"home",true));
-$("#gProducts").onclick=()=>showView("products");
+$("#gProducts").onclick=()=>showView("cats");
 $("#gOrders").onclick=()=>showView("orders");
 $("#gStats").onclick=()=>showView("stats");
 $("#gBanners").onclick=()=>showView("banners");
-document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showView("home"));
+document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>{
+  if(history.state&&history.state.av)history.back();else showView("home");
+});
 
 $("#go").onclick=()=>{pw=$("#pw").value;login();};
 $("#cancel").onclick=reset;
