@@ -70,8 +70,11 @@ function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=n
 function closeDetail(){
   if(history.state&&history.state.pm){history.back();}else{hideModal();}
 }
-// Back button: close the product popup first, then the cart/menu drawer, and only then leave the page.
-window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else if($("#moModal"))removeMyOrders();else hideDrawers();});
+// Back button: close the success page, the product popup, My orders, then the cart/menu drawer, and only then leave the page.
+window.addEventListener("popstate",()=>{
+  if($("#okModal")){$("#okModal").remove();return;}
+  const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else if($("#moModal"))removeMyOrders();else hideDrawers();
+});
 
 // Swipeable photo strip if the product has extra photos, otherwise the main photo.
 function photosHtml(p){
@@ -183,11 +186,42 @@ $("#order").onclick=async()=>{
   cart={};saveCart();renderCart();
   ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
   $("#district").value="";
-  m.style.color="#1a7f37";
-  m.innerHTML="Order "+d.code+" placed! Your tracking code is <b>"+d.code+"</b>. <br>Delivery within 5 working days, expected by <b>"+deliveryText(bill.created)+"</b>. "
-    +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener">Send to WhatsApp</a>';
-  m.insertAdjacentHTML("beforeend",' <br><button onclick="downloadBillByCode(\''+d.code+'\')" style="margin-top:8px;padding:10px 14px;border:1px solid #111;background:#fff;color:#111;border-radius:8px;font-weight:700">Download bill</button>');
+  m.textContent="";
+  showOrderDone(bill,text);
 };
+
+// Order success page: shows the order code, delivery date, bill and a way back to the main page.
+function showOrderDone(b,text){
+  hideDrawers();
+  let box=$("#okModal");
+  if(!box){
+    box=document.createElement("div");box.id="okModal";
+    box.style.cssText="position:fixed;inset:0;background:#fff;z-index:90;overflow-y:auto;padding:24px 18px;text-align:center";
+    document.body.appendChild(box);
+  }
+  box.innerHTML='<div style="font-size:60px;color:#1a7f37;margin-top:30px;line-height:1">✓</div>'
+    +'<h2 style="font-size:22px;margin:12px 0 8px">Order placed successfully!</h2>'
+    +'<p style="font-size:16px">Your order code: <b>'+esc(b.code)+'</b></p>'
+    +'<p style="color:#444;margin-top:10px">Delivery within 5 working days,<br>expected by <b>'+esc(deliveryText(b.created))+'</b></p>'
+    +'<div style="margin:26px auto 0;display:grid;gap:10px;max-width:320px">'
+    +'<button onclick="viewBillByCode(\''+esc(b.code)+'\')" style="padding:13px;background:#111;color:#f3d27a;border:0;border-radius:8px;font-weight:700;font-size:16px">View bill</button>'
+    +'<button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="padding:13px;border:1px solid #111;background:#fff;color:#111;border-radius:8px;font-weight:700;font-size:16px">Download bill</button>'
+    +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener" style="padding:13px;border-radius:8px;background:#25d366;color:#fff;font-weight:700;text-decoration:none;font-size:16px">Send to WhatsApp</a>'
+    +'<button onclick="closeOrderDone()" style="padding:13px;border:0;background:#eee;color:#111;border-radius:8px;font-weight:700;font-size:16px">Back to main page</button>'
+    +'</div>';
+  if(!(history.state&&history.state.ok))history.pushState({ok:1},"");
+  window.scrollTo(0,0);
+}
+function closeOrderDone(){
+  const b=$("#okModal");if(b)b.remove();
+  if(history.state&&history.state.ok){history.back();}
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function viewBillByCode(code){
+  const b=loadMyOrders().find(x=>x.code===code);if(!b)return;
+  const url=URL.createObjectURL(new Blob([billHtml(b)],{type:"text/html"}));
+  window.open(url,"_blank");
+}
 
 // ---- Bills and "My orders" (kept on this phone) ----
 function loadMyOrders(){try{return JSON.parse(localStorage.getItem("maxstyle_orders")||"[]")||[];}catch(e){return [];}}
