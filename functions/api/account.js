@@ -32,6 +32,18 @@ export async function onRequestPost({ request, env }) {
   try { b = await request.json(); } catch (e) { return J({ error: "Bad request" }, 400); }
   const act = b.action;
 
+  // Admin: reset a customer's PIN (used from the PIN reset page).
+  if (act === "adminReset") {
+    if (!env.ADMIN_PASSWORD || request.headers.get("x-admin-password") !== env.ADMIN_PASSWORD) return J({ error: "Wrong password" }, 401);
+    const phone = normPhone(b.phone), pin = String(b.new_pin || "");
+    if (phone.length < 9) return J({ error: "Enter a valid phone number" }, 400);
+    if (!/^\d{4}$/.test(pin)) return J({ error: "New PIN must be 4 digits" }, 400);
+    const row = await env.DB.prepare("SELECT id FROM customers WHERE phone=?").bind(phone).first();
+    if (!row) return J({ error: "No account with this phone number" }, 404);
+    await env.DB.prepare("UPDATE customers SET pin_hash=?, token=NULL WHERE id=?").bind(await hashPin(phone, pin), row.id).run();
+    return J({ ok: true });
+  }
+
   if (act === "signup" || act === "login") {
     const phone = normPhone(b.phone), pin = String(b.pin || "");
     if (phone.length < 9) return J({ error: "Enter a valid phone number" }, 400);
@@ -56,6 +68,17 @@ export async function onRequestPost({ request, env }) {
   // Everything below needs a valid token.
   const p = await me(env, b.token);
   if (!p) return J({ error: "Please sign in" }, 401);
+
+  // Customer confirms they received an order that is packed or out for delivery.
+  if (act === "confirm") {
+    const id = parseInt(String(b.code || "").replace(/\D/g, ""), 10) - 1000;
+    const o = await env.DB.prepare("SELECT id,status FROM orders WHERE id=? AND phone1 LIKE ?")
+      .bind(id, "%" + p.phone.slice(-9)).first();
+    if (!o) return J({ error: "Order not found" }, 404);
+    if (!["packed", "out"].includes(o.status)) return J({ error: "This order cannot be confirmed now" }, 400);
+    await env.DB.prepare("UPDATE orders SET status='delivered' WHERE id=?").bind(id).run();
+    return J({ ok: true });
+  }
 
   if (act === "update") {
     const name = String(b.name || "").trim();
