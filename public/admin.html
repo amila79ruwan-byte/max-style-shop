@@ -22,6 +22,7 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .item{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eee}
 .item img,.item .np{width:56px;height:70px;object-fit:cover;border-radius:6px;background:#eee;flex:none}
 .item div{flex:1;font-size:14px}
+.pcode{display:inline-block;background:#111;color:#f3d27a;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:4px}
 .msg{font-size:14px;margin-bottom:8px;color:#c62828}
 .hint{font-size:12px;color:#666;margin:-6px 0 10px}
 #prev{max-height:140px;margin-bottom:10px;border-radius:8px;display:none}
@@ -85,7 +86,12 @@ M|96|70"></textarea>
     <div class="msg" id="pmsg"></div>
   </div>
 
-  <div class="box"><b>Products</b><div id="list"></div></div>
+  <div class="box">
+    <b>Products</b>
+    <input id="psearch" type="search" placeholder="Search by code (MS-P0007) or name" style="margin-top:10px">
+    <div class="muted" id="pcnt" style="margin-bottom:6px"></div>
+    <div id="list"></div>
+  </div>
   </div>
 
   <div id="vOrders" style="display:none">
@@ -103,6 +109,9 @@ const $=s=>document.querySelector(s);
 let pw=sessionStorage.getItem("pw")||"", image="", editId=null, items=[];
 const hdr=()=>({"content-type":"application/json","x-admin-password":pw});
 
+// Automatic product code: made from the product id (id 7 -> MS-P0007).
+const pcode=id=>"MS-P"+String(id).padStart(4,"0");
+
 async function shrink(file){
   const img=await createImageBitmap(file);
   const s=Math.min(1,700/Math.max(img.width,img.height));
@@ -118,12 +127,23 @@ async function login(){
 }
 async function load(){
   items=await (await fetch("/api/products")).json();
-  $("#list").innerHTML=items.length?items.map(p=>`<div class="item">
-    ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
-    <div><b>${p.name}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${p.cat}</div>
-    <button class="edt" onclick="edit(${p.id})">Edit</button>
-    <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>No products yet.</p>";
+  renderList();
 }
+// Product list with search (by code or name).
+function renderList(){
+  const term=($("#psearch").value||"").trim().toLowerCase();
+  const list=items.filter(p=>!term
+    ||pcode(p.id).toLowerCase().includes(term)
+    ||String(p.id)===term.replace(/^0+/,"")
+    ||String(p.name).toLowerCase().includes(term));
+  $("#pcnt").textContent=term?(list.length+" of "+items.length+" products"):(items.length+" products");
+  $("#list").innerHTML=list.length?list.map(p=>`<div class="item">
+    ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
+    <div><span class="pcode">${pcode(p.id)}</span><br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${esc(p.cat)}</div>
+    <button class="edt" onclick="edit(${p.id})">Edit</button>
+    <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products yet.")+"</p>";
+}
+$("#psearch").addEventListener("input",renderList);
 function reset(){
   editId=null;image="";
   ["#name","#price","#sizes","#colors","#desc","#chart","#file"].forEach(s=>$(s).value="");
@@ -135,12 +155,12 @@ function edit(id){
   $("#name").value=p.name;$("#price").value=p.price;$("#cat").value=p.cat;
   $("#sizes").value=p.sizes||"";$("#colors").value=p.colors||"";
   $("#desc").value=p.description||"";$("#chart").value=p.size_chart||"";
-  $("#ftitle").textContent="Edit product (leave photo empty to keep it)";$("#cancel").style.display="block";
+  $("#ftitle").textContent="Edit product "+pcode(id)+" (leave photo empty to keep it)";$("#cancel").style.display="block";
   loadPhotos();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 async function del(id){
-  if(!confirm("Delete this product?"))return;
+  if(!confirm("Delete product "+pcode(id)+"?"))return;
   await fetch("/api/products?id="+id,{method:"DELETE",headers:hdr()});load();
 }
 
@@ -196,7 +216,7 @@ async function loadOrders(){
       <div><b>${esc(o.name)}</b> · ${esc(o.district)}</div>
       <div class="muted">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}</div>
       <div class="muted">${esc(o.address)}</div>
-      <ul>${o.items.map(i=>`<li>${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?" ["+esc(i.color)+"]":""} x${i.qty}</li>`).join("")}</ul>
+      <ul>${o.items.map(i=>`<li>${i.id?"<b>"+pcode(i.id)+"</b> · ":""}${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?" ["+esc(i.color)+"]":""} x${i.qty}</li>`).join("")}</ul>
       <div class="orow"><b>Rs. ${money(o.total)}</b>
         <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select>
       </div>
