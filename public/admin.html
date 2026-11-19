@@ -48,6 +48,14 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 </div>
 
 <div id="panel" style="display:none">
+
+  <div id="home">
+    <button id="gProducts" style="padding:18px;font-size:18px;margin-bottom:12px">Products</button>
+    <button id="gOrders" style="padding:18px;font-size:18px">Orders</button>
+  </div>
+
+  <div id="vProducts" style="display:none">
+  <button class="sec" data-back>← Back</button>
   <div class="box">
     <b id="ftitle">Add product</b><br><br>
     <input id="name" placeholder="Product name">
@@ -78,11 +86,15 @@ M|96|70"></textarea>
   </div>
 
   <div class="box"><b>Products</b><div id="list"></div></div>
+  </div>
 
+  <div id="vOrders" style="display:none">
+  <button class="sec" data-back>← Back</button>
   <div class="box">
     <div class="orow"><b>Orders</b><button class="sec" id="oreload" style="width:auto;margin:0;padding:8px 12px">Refresh</button></div>
     <div class="muted" id="ocount" style="margin:6px 0 8px"></div>
     <div id="olist"></div>
+  </div>
   </div>
 </div>
 
@@ -101,7 +113,7 @@ async function shrink(file){
 }
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
-  if(r.ok){sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";load();loadOrders();}
+  if(r.ok){sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";showView("home");load();loadOrders();}
   else{$("#lmsg").textContent="Wrong password, or the server is not set up yet.";}
 }
 async function load(){
@@ -192,6 +204,17 @@ async function setOrderStatus(id,status){
   loadOrders();
 }
 $("#oreload").onclick=loadOrders;
+
+// Home screen with two buttons: Products / Orders
+function showView(v){
+  $("#home").style.display=v==="home"?"block":"none";
+  $("#vProducts").style.display=v==="products"?"block":"none";
+  $("#vOrders").style.display=v==="orders"?"block":"none";
+  window.scrollTo(0,0);
+}
+$("#gProducts").onclick=()=>showView("products");
+$("#gOrders").onclick=()=>showView("orders");
+document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showView("home"));
 
 $("#go").onclick=()=>{pw=$("#pw").value;login();};
 $("#cancel").onclick=reset;
