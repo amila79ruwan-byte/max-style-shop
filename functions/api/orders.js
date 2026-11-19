@@ -7,19 +7,35 @@ const codeOf = id => "MS-" + (1000 + Number(id));
 const phoneOk = p => /^[0-9+\s-]{9,15}$/.test(p);
 const listOf = v => String(v || "").split(",").map(s => s.trim()).filter(Boolean);
 
+// Price rules (all in Rs.)
+const FIRST_ORDER_PCT = 10;      // first order discount, on the items total
+const FREE_DELIVERY_FROM = 7000; // free delivery when the items total (after discount) is this or more
+const DELIVERY_FEE = 350;        // courier delivery
+const COD_FEE = 150;             // extra fee for cash on delivery
+
+// Is this the first order from this phone number? (matched by the last 9 digits)
+async function isFirstOrder(env, phone) {
+  const last9 = String(phone || "").replace(/\D/g, "").slice(-9);
+  if (last9.length < 9) return false;
+  const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE phone1 LIKE ?").bind("%" + last9).first();
+  return !row || row.n === 0;
+}
+
 export async function onRequestPost({ request, env }) {
   const b = await request.json();
   const name = clean(b.name), phone1 = clean(b.phone1), phone2 = clean(b.phone2);
   const district = clean(b.district), address = String(b.address || "").trim().slice(0, 500);
   if (!name || !phone1 || !address || !DISTRICTS.includes(district)) return J({ error: "Please fill in all required fields." }, 400);
   if (!phoneOk(phone1) || (phone2 && !phoneOk(phone2))) return J({ error: "Please enter a valid phone number." }, 400);
+  if (b.payment && b.payment !== "cod") return J({ error: "This payment method is not available yet." }, 400);
+  const payment = "cod";
   const cartIn = Array.isArray(b.items) ? b.items : [];
   if (!cartIn.length || cartIn.length > 50) return J({ error: "Your cart is empty." }, 400);
 
   // Prices are read from the database here. The browser's prices are never trusted.
   const { results: products } = await env.DB.prepare("SELECT id,name,price,sizes,colors FROM products").all();
   const lines = [];
-  let total = 0;
+  let subtotal = 0;
   for (const it of cartIn) {
     const p = products.find(x => x.id == it.id);
     if (!p) return J({ error: "A product in your cart is no longer available." }, 400);
@@ -32,19 +48,32 @@ export async function onRequestPost({ request, env }) {
     const color = colorList.length ? clean(it.color) : "";
     if (colorList.length && !colorList.includes(color)) return J({ error: "Please select a color for " + p.name + "." }, 400);
     lines.push({ name: p.name, size, color, qty, price: p.price });
-    total += p.price * qty;
+    subtotal += p.price * qty;
   }
 
+  // Discounts and fees
+  const firstOrder = await isFirstOrder(env, phone1);
+  const discount = firstOrder ? Math.round(subtotal * FIRST_ORDER_PCT / 100) : 0;
+  const afterDiscount = subtotal - discount;
+  const delivery = afterDiscount >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
+  const codFee = payment === "cod" ? COD_FEE : 0;
+  const total = afterDiscount + delivery + codFee;
+
   const r = await env.DB.prepare(
-    "INSERT INTO orders (name,phone1,phone2,district,address,items,total,status,created) VALUES (?,?,?,?,?,?,?,?,?)"
-  ).bind(name, phone1, phone2, district, address, JSON.stringify(lines), total, "received", Date.now()).run();
-  return J({ ok: true, code: codeOf(r.meta.last_row_id), total, lines });
+    "INSERT INTO orders (name,phone1,phone2,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(name, phone1, phone2, district, address, JSON.stringify(lines), total, "received", Date.now(), payment, subtotal, discount, delivery, codFee).run();
+  return J({ ok: true, code: codeOf(r.meta.last_row_id), subtotal, discount, delivery, codFee, total, lines });
 }
 
 // Public: customer checks status with an order code. Admin (with password): full list.
 export async function onRequestGet({ request, env }) {
+  const q = new URL(request.url).searchParams;
+  // Public: is this phone number eligible for the first order discount? (returns only true/false)
+  if (q.has("firstcheck")) {
+    return J({ first: await isFirstOrder(env, q.get("firstcheck")) });
+  }
   if (!ok(request, env)) {
-    const code = (new URL(request.url).searchParams.get("code") || "").trim().toUpperCase();
+    const code = (q.get("code") || "").trim().toUpperCase();
     const m = code.match(/^MS-(\d+)$/);
     if (!m) return J({ error: "Please enter a valid order code, like MS-1001." }, 400);
     const row = await env.DB.prepare("SELECT status,items,total,created FROM orders WHERE id=?").bind(Number(m[1]) - 1000).first();
