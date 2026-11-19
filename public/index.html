@@ -16,6 +16,15 @@
 .co .pay.dis{color:#999;background:#fafafa}
 .co .pay small{margin-left:auto;font-size:11px}
 .co .dnote{display:flex;align-items:center;gap:8px;background:#f7f4ea;border-radius:8px;padding:8px 10px;font-size:13px;margin:8px 0 12px}
+
+/* ===== Banner slideshow ===== */
+.banner{overflow:hidden;position:relative;width:100%}
+.banner .bn-track{display:flex;width:100%;transition:transform .6s ease;will-change:transform}
+.banner .bn-slide{flex:0 0 100%;min-width:100%;display:block}
+.banner .bn-slide img{width:100%;height:auto;display:block;max-height:none}
+.banner .bn-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.banner .bn-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55)}
+.banner .bn-dots i.on{background:#fff}
 </style>
 </head>
 <body>
@@ -33,8 +42,11 @@
 <div class="sbar" id="sbar"><input id="q" type="search" placeholder="Search products"></div>
 
 <main id="top">
-  <div class="banner">
-    <img src="1042795727_1794864022407312~2.jpg" alt="Max Style - Style without limits">
+  <div class="banner" id="banner">
+    <div class="bn-track" id="bnTrack">
+      <div class="bn-slide"><img src="1042795727_1794864022407312~2.jpg" alt="Max Style - Style without limits"></div>
+    </div>
+    <div class="bn-dots" id="bnDots"></div>
   </div>
 
   <h2 class="title">NEW ARRIVALS</h2>
@@ -117,5 +129,63 @@
 <script src="lang.js"></script>
 <script src="shop.js"></script>
 <script src="account.js"></script>
+
+<!-- Banner slideshow: loads active banners from /api/banners, auto-slides, swipe on phone -->
+<script>
+(function(){
+  var track=document.getElementById('bnTrack'),dots=document.getElementById('bnDots');
+  if(!track||!dots)return;
+  var i=0,timer=null;
+
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+  function safeLink(u){u=String(u||'').trim();return /^(https?:\/\/|\/|#|tel:|mailto:)/i.test(u)?u:''}
+
+  function go(n){
+    var len=track.children.length;
+    if(!len)return;
+    i=((n%len)+len)%len;
+    track.style.transform='translateX(-'+(i*100)+'%)';
+    for(var k=0;k<dots.children.length;k++){dots.children[k].className=(k===i?'on':'')}
+  }
+  function stop(){if(timer){clearInterval(timer);timer=null}}
+  function start(){
+    stop();
+    if(track.children.length<2)return;
+    timer=setInterval(function(){go(i+1)},3500);
+  }
+
+  function render(list){
+    track.innerHTML=list.map(function(b){
+      var img='<img src="'+esc(b.image)+'" alt="'+esc(b.text)+'">';
+      var l=safeLink(b.link);
+      return l?'<a class="bn-slide" href="'+esc(l)+'">'+img+'</a>':'<div class="bn-slide">'+img+'</div>';
+    }).join('');
+    dots.innerHTML=list.length>1?list.map(function(_,k){return '<i'+(k===0?' class="on"':'')+'></i>'}).join(''):'';
+    i=0;
+    track.style.transform='translateX(0)';
+    start();
+  }
+
+  fetch('/api/banners',{cache:'no-store'})
+    .then(function(r){return r.json()})
+    .then(function(list){
+      if(Array.isArray(list)&&list.length)render(list);
+    })
+    .catch(function(){});
+
+  // swipe (phone)
+  var sx=null;
+  track.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;stop()},{passive:true});
+  track.addEventListener('touchend',function(e){
+    if(sx===null)return;
+    var dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>40)go(i+(dx<0?1:-1));
+    sx=null;start();
+  });
+
+  // pause when tab hidden
+  document.addEventListener('visibilitychange',function(){document.hidden?stop():start()});
+})();
+</script>
 </body>
 </html>
