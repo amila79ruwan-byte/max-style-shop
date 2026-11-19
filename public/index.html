@@ -26,40 +26,42 @@
 .bn{display:flex;justify-content:space-around}
 .bn button{flex:1}
 
-/* ===== Side menu ===== */
-#menu{overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff}
+/* ===== Side menu (compact: fits the screen) ===== */
+#menu{overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;width:min(78vw,300px)}
+#menu .dh{padding-top:10px;padding-bottom:10px}
 
 /* search */
-#menu .mq{display:flex;align-items:center;gap:10px;margin:16px;padding:0 16px;height:46px;background:#f2f2f2;border:1px solid #e4e4e4;border-radius:999px;transition:border-color .2s,background .2s}
+#menu .mq{display:flex;align-items:center;gap:8px;margin:8px 12px 6px;padding:0 12px;height:38px;background:#f2f2f2;border:1px solid #e4e4e4;border-radius:999px;transition:border-color .2s,background .2s}
 #menu .mq:focus-within{background:#fff;border-color:#111}
-#menu .mq svg{width:20px;height:20px;flex:none;fill:none;stroke:#111;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#menu .mq input{flex:1;min-width:0;border:0;background:transparent;outline:0;font:inherit;font-size:15px;color:#000;padding:0;margin:0;height:100%}
+#menu .mq svg{width:17px;height:17px;flex:none;fill:none;stroke:#111;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#menu .mq input{flex:1;min-width:0;border:0;background:transparent;outline:0;font:inherit;font-size:14px;color:#000;padding:0;margin:0;height:100%}
 
 /* main items + group header */
-#menu .mi,#menu .mg{display:flex;align-items:center;justify-content:space-between;width:calc(100% - 32px);margin:0 16px;padding:18px 6px;border:0;border-bottom:1px solid #e8e8e8;border-radius:10px;background:none;color:#000;font:inherit;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s ease,background .15s ease}
-#menu .mi svg,#menu .mg svg{width:18px;height:18px;flex:none;fill:none;stroke:#000;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s ease}
+#menu .mi,#menu .mg{display:flex;align-items:center;justify-content:space-between;width:calc(100% - 24px);margin:0 12px;padding:clamp(9px,1.9vh,14px) 4px;border:0;border-bottom:1px solid #eee;border-radius:8px;background:none;color:#000;font:inherit;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s ease,background .15s ease}
+#menu .mi svg,#menu .mg svg{width:15px;height:15px;flex:none;fill:none;stroke:#000;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s ease}
 #menu .mg[aria-expanded="true"] svg{transform:rotate(90deg)}
 
 /* touch: item shrinks a little */
 #menu .mi:active,#menu .mg:active{transform:scale(.96);background:#f3f3f3}
-#menu .mi:active span,#menu .mg:active span{font-size:14px}
+#menu .mi:active span,#menu .mg:active span{font-size:12px}
 
 /* sub items */
-#menu .sub{display:none;background:#f8f8f8;margin:0 16px;width:calc(100% - 32px);border-radius:0 0 12px 12px;overflow:hidden}
+#menu .sub{display:none;background:#f8f8f8;margin:0 12px;width:calc(100% - 24px);border-radius:0 0 10px 10px;overflow:hidden}
 #menu .sub.open{display:block}
-#menu .sub .mi{width:100%;margin:0;font-size:14px;font-weight:600;padding:16px 6px 16px 18px;color:#111;border-radius:0}
-#menu .sub .mi svg{width:16px;height:16px}
+#menu .sub .mi{width:100%;margin:0;font-size:12px;font-weight:600;padding:clamp(7px,1.5vh,11px) 4px clamp(7px,1.5vh,11px) 14px;color:#111;border-radius:0}
+#menu .sub .mi svg{width:13px;height:13px}
 
 /* offers */
 #menu .mi.off{color:#c0392b}
 #menu .mi.off svg{stroke:#c0392b}
 
-/* bottom links */
-#menu .ml{display:flex;flex-direction:column;padding:14px 16px 32px}
-#menu .ml a{display:block;padding:14px 6px;font-size:14px;font-weight:700;color:#000;text-decoration:none;border-radius:10px;transition:transform .15s,background .15s}
-#menu .ml a:active{transform:scale(.96);background:#f3f3f3}
-#menu .ml a.trk{margin-top:14px;padding:15px;border-radius:999px;background:#111;color:#fff;text-align:center;font-weight:700;letter-spacing:.4px}
+/* bottom links: small, side by side */
+#menu .ml{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 14px;padding:10px 16px 4px}
+#menu .ml a{display:block;padding:6px 0;font-size:12px;font-weight:600;color:#555;text-decoration:none;border-radius:6px}
+#menu .ml a:active{transform:scale(.96);color:#000}
+#menu .ml a.trk{flex:1 0 100%;margin-top:6px;padding:11px;border-radius:999px;background:#111;color:#fff;text-align:center;font-size:13px;font-weight:700;letter-spacing:.4px}
 #menu .ml a.trk:active{transform:scale(.95);background:#000}
+#menu > .mi:last-child{margin-bottom:14px}
 
 /* ===== Banner slideshow ===== */
 .banner{overflow:hidden;position:relative;width:100%}
