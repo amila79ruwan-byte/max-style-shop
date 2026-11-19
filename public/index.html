@@ -78,6 +78,12 @@
     <input id="phone2" placeholder="Alternate phone number (optional)" inputmode="tel" autocomplete="tel">
     <select id="district" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px"><option value="">Select district</option><option>Colombo</option><option>Gampaha</option><option>Kalutara</option><option>Kandy</option><option>Matale</option><option>Nuwara Eliya</option><option>Galle</option><option>Matara</option><option>Hambantota</option><option>Jaffna</option><option>Kilinochchi</option><option>Mannar</option><option>Vavuniya</option><option>Mullaitivu</option><option>Batticaloa</option><option>Ampara</option><option>Trincomalee</option><option>Kurunegala</option><option>Puttalam</option><option>Anuradhapura</option><option>Polonnaruwa</option><option>Badulla</option><option>Monaragala</option><option>Ratnapura</option><option>Kegalle</option></select>
     <textarea id="addr" rows="3" placeholder="Delivery address"></textarea>
+    <div style="margin:6px 0 12px;font-size:15px">
+      <b style="display:block;margin-bottom:6px">Payment method</b>
+      <label style="display:block;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px"><input type="radio" name="pay" value="cod" checked> Cash on delivery</label>
+      <label style="display:block;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;color:#999"><input type="radio" name="pay" value="card" disabled> Card <small>(Coming soon)</small></label>
+      <label style="display:block;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;color:#999"><input type="radio" name="pay" value="bank" disabled> Online bank transfer <small>(Coming soon)</small></label>
+    </div>
     <button class="cta" id="order">Place order</button>
     <div id="msg" role="status"></div>
     <p style="margin-top:12px;text-align:center"><a href="track.html" style="text-decoration:underline">Track my order</a></p>
