@@ -3,6 +3,8 @@ const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const fmt=n=>Number(n).toLocaleString("en-US");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const listOf=v=>String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
+// Automatic product code: made from the product id (id 7 -> MS-P0007).
+const pcode=id=>"MS-P"+String(id).padStart(4,"0");
 let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(loadWish()),cat="all",term="",onlyWish=false;
 let detail=null,dSize="",dColor="",dQty=1,dChart=false;
 $("#wa").href="https://wa.me/"+WHATSAPP;
@@ -101,6 +103,7 @@ function renderDetail(){
     +photosHtml(p)
     +'<h2>'+esc(p.name)+'</h2>'
     +'<div class="pm-price">Rs. '+fmt(p.price)+'</div>'
+    +'<div style="font-size:12px;color:#888;margin-top:2px">Code: '+pcode(p.id)+'</div>'
     +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
     +(p.colorList.length
       ?'<div class="pm-lbl">Color'+(dColor?': '+esc(dColor):'')+'</div><div class="pm-opts">'
@@ -134,7 +137,7 @@ function renderGrid(){
   const g=$("#grid");
   if(status==="loading"){g.innerHTML='<p class="empty">Loading…</p>';return;}
   if(status==="error"){g.innerHTML='<p class="empty">Could not load products. Please refresh.</p>';return;}
-  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&(cat==="all"||p.cat===cat)&&p.name.toLowerCase().includes(term));
+  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&(cat==="all"||p.cat===cat)&&(p.name.toLowerCase().includes(term)||pcode(p.id).toLowerCase().includes(term)));
   g.innerHTML=list.length?list.map(card).join(""):'<p class="empty">'+(onlyWish?"Your wishlist is empty. Tap the heart on a product to save it.":"No products found.")+"</p>";
   $$("#chips button").forEach(b=>b.classList.toggle("on",b.dataset.cat===cat));
 }
