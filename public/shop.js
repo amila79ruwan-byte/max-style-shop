@@ -24,6 +24,23 @@ function toast(t){
   document.body.appendChild(d);setTimeout(()=>d.remove(),1800);
 }
 
+// ---- Page history (phone back button) ----
+// Every page/popup that opens adds one history step: {v:"pm"|"cart"|"menu"|"co"|"ok"|"mo"}.
+// Back always returns to the page that was open before it.
+function curV(){return (history.state&&history.state.v)||"";}
+if(curV())history.replaceState(null,"");
+window.addEventListener("popstate",()=>{
+  const v=curV();
+  if(v!=="ok"){const o=$("#okModal");if(o)o.remove();}
+  if(v!=="co")hideCheckout();
+  if(v!=="mo")removeMyOrders();
+  if(v!=="pm")hideModal();
+  if(v==="cart"||v==="menu"){
+    if(v==="cart"&&!keys().length){history.back();return;}
+    showDr(v);
+  }else hideDrawers();
+});
+
 // Product detail popup (created once).
 function ensureModal(){
   if($("#pmodal"))return;
@@ -62,20 +79,14 @@ function openDetail(id){
     fetch("/api/photos?product="+p.id).then(r=>r.json()).then(l=>{p.photos=l;if(detail===p)renderDetail();}).catch(()=>{});
   }
   renderDetail();
-  if(!(history.state&&history.state.pm))history.pushState({pm:1},"");
+  if(curV()!=="pm")history.pushState({v:"pm"},"");
   $("#pmodal").classList.add("on");
 }
 function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=null;}
 // Closing the popup: the back button closes the popup first, not the whole page.
 function closeDetail(){
-  if(history.state&&history.state.pm){history.back();}else{hideModal();}
+  if(curV()==="pm"){history.back();}else{hideModal();}
 }
-// Back button: close the success page, the product popup, My orders, then the cart/menu drawer, and only then leave the page.
-window.addEventListener("popstate",()=>{
-  if($("#okModal")){$("#okModal").remove();return;}
-  if(checkoutShown()){hideCheckout();return;}
-  const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else if($("#moModal"))removeMyOrders();else hideDrawers();
-});
 
 // Swipeable photo strip if the product has extra photos, otherwise the main photo.
 function photosHtml(p){
@@ -142,16 +153,22 @@ function renderCart(){
   $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;$("#cnt2").textContent=n;
   saveCart();
 }
-// Side drawers (menu / cart) also use browser history, so the phone back button closes them.
+// Side drawers (menu / cart). Each one adds a history step, so the phone back button closes it.
 function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
-function openDr(id){
+function showDr(id){
   hideDrawers();
   $("#"+id).classList.add("on");$("#ov").classList.add("on");
-  if(history.state&&history.state.pm)history.replaceState({dr:1},"");
-  else if(!(history.state&&history.state.dr))history.pushState({dr:1},"");
+}
+function openDr(id){
+  showDr(id);
+  const cur=curV();
+  if(cur===id){}
+  else if(cur==="pm"||cur==="menu"||cur==="cart")history.replaceState({v:id},"");
+  else history.pushState({v:id},"");
 }
 function closeDr(){
-  if(history.state&&history.state.dr){history.back();}else{hideDrawers();}
+  const cur=curV();
+  if(cur==="cart"||cur==="menu"){history.back();}else{hideDrawers();}
 }
 function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
 function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
@@ -202,19 +219,17 @@ function checkFirst(){
 }
 $("#phone").addEventListener("input",checkFirst);
 
-// Cart -> Next opens the delivery details page. The phone back button returns to the cart page.
+// Cart -> Next opens the delivery details page. The phone back button returns to the cart.
 function checkoutShown(){const c=$("#checkout");return !!c&&c.style.display==="block";}
 function openCheckout(){
   if(!keys().length){toast("Add at least one item first");return;}
-  hideDrawers();
   $("#checkout").style.display="block";
-  if(history.state&&history.state.dr)history.replaceState({co:1},"");
-  else if(!(history.state&&history.state.co))history.pushState({co:1},"");
+  if(curV()!=="co")history.pushState({v:"co"},"");
   window.scrollTo(0,0);
 }
 function hideCheckout(){const c=$("#checkout");if(c)c.style.display="none";}
 function closeCheckout(){
-  if(history.state&&history.state.co){history.back();}else{hideCheckout();}
+  if(curV()==="co"){history.back();}else{hideCheckout();}
 }
 $("#toCheckout").onclick=openCheckout;
 $("#coBack").onclick=closeCheckout;
@@ -265,14 +280,15 @@ function showOrderDone(b,text){
     +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener" style="padding:13px;border-radius:8px;background:#25d366;color:#fff;font-weight:700;text-decoration:none;font-size:16px">Send to WhatsApp</a>'
     +'<button onclick="closeOrderDone()" style="padding:13px;border:0;background:#eee;color:#111;border-radius:8px;font-weight:700;font-size:16px">Back to main page</button>'
     +'</div>';
-  if(history.state&&history.state.ok){/* already on the success page */}
-  else if(history.state&&history.state.co)history.replaceState({ok:1},"");
-  else history.pushState({ok:1},"");
+  const cur=curV();
+  if(cur==="ok"){/* already on the success page */}
+  else if(cur==="co")history.replaceState({v:"ok"},"");
+  else history.pushState({v:"ok"},"");
   window.scrollTo(0,0);
 }
 function closeOrderDone(){
   const b=$("#okModal");if(b)b.remove();
-  if(history.state&&history.state.ok){history.back();}
+  if(curV()==="ok"){history.back();}
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function viewBillByCode(code){
@@ -296,12 +312,21 @@ function deliveryText(created){
 function billHtml(b){
   const rows=b.items.map(i=>'<tr><td>'+esc(i.name)+(i.size?' ('+esc(i.size)+')':'')+(i.color?'<br><small>'+esc(i.color)+'</small>':'')+'</td><td>'+i.qty+'</td><td style="text-align:right">Rs. '+fmt(i.amount)+'</td></tr>').join("");
   const when=new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
-  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill '+esc(b.code)+'</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.tot{font-size:18px;font-weight:700;text-align:right;margin-top:10px}</style></head><body>'
+  const r=(l,v,c)=>'<div class="r"'+(c?' style="color:'+c+'"':'')+'><span>'+l+'</span><span>'+v+'</span></div>';
+  const sum=(b.subtotal!==undefined
+      ?r("Items","Rs. "+fmt(b.subtotal))
+        +(b.discount?r("First order discount (10%)","- Rs. "+fmt(b.discount),"#1a7f37"):"")
+        +r("Delivery",b.delivery?"Rs. "+fmt(b.delivery):"Free")
+        +r("Cash on delivery fee","Rs. "+fmt(b.codFee))
+      :"")
+    +'<div class="r tot"><span>Total</span><span>Rs. '+fmt(b.total)+'</span></div>';
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill '+esc(b.code)+'</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin:12px 0 10px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.r{display:flex;justify-content:space-between;margin:5px 0;font-size:14px}.tot{font-size:17px;font-weight:700;border-top:1px solid #ddd;margin-top:10px;padding-top:8px}</style></head><body>'
    +'<h1>Max Style</h1><div class="sub">Style without limits · 0722555929</div>'
    +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span><br><span class="sub">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</span></p>'
    +(b.name?'<p><b>'+esc(b.name)+'</b><br><span class="sub">'+esc(b.phone1)+(b.phone2?' / '+esc(b.phone2):'')+'<br>'+esc(b.address)+'<br>'+esc(b.district)+'</span></p>':'')
    +'<table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr>'+rows+'</table>'
-   +(b.subtotal!==undefined?'<div class="sub">Items: Rs. '+fmt(b.subtotal)+(b.discount?' · First order discount: -Rs. '+fmt(b.discount):'')+' · Delivery: '+(b.delivery?'Rs. '+fmt(b.delivery):'Free')+' · COD fee: Rs. '+fmt(b.codFee)+'</div>':'')+'<div class="tot">Total: Rs. '+fmt(b.total)+'</div><p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
+   +sum
+   +'<p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
 }
 function downloadBill(b){
   const blob=new Blob([billHtml(b)],{type:"text/html"});
@@ -310,7 +335,7 @@ function downloadBill(b){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
 }
 function downloadBillByCode(code){const b=loadMyOrders().find(x=>x.code===code);if(b)downloadBill(b);}
-// My orders opens as a full page (not a popup). The phone back button closes it.
+// My orders opens as a full page (not a popup). The phone back button returns to the menu.
 function openMyOrders(){
   hideDrawers();
   let box=$("#moModal");
@@ -319,15 +344,14 @@ function openMyOrders(){
     box.style.cssText="position:fixed;inset:0;background:#fff;z-index:85;overflow-y:auto;padding:16px";
     document.body.appendChild(box);
   }
-  if(history.state&&history.state.dr)history.replaceState({mo:1},"");
-  else if(!(history.state&&history.state.mo))history.pushState({mo:1},"");
+  if(curV()!=="mo")history.pushState({v:"mo"},"");
   const list=loadMyOrders();
   box.innerHTML='<button class="sec" onclick="closeMyOrders()" style="width:auto;padding:10px 14px;margin-bottom:12px">← Back</button>'
     +'<h2 style="font-size:20px;margin-bottom:10px">My orders</h2>'
-    +(list.length?list.map(b=>'<div style="border-bottom:1px solid #eee;padding:10px 0"><b>'+esc(b.code)+'</b> · Rs. '+fmt(b.total)+'<br><small style="color:#666">'+esc(new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</small><br><small style="color:#666">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</small><br><button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;padding:8px 12px;border:1px solid #111;background:#fff;color:#111;border-radius:6px;font-weight:700">Download bill</button></div>').join(""):'<p style="color:#666">No orders on this phone yet.</p>');
+    +(list.length?list.map(b=>'<div style="border-bottom:1px solid #eee;padding:10px 0"><b>'+esc(b.code)+'</b> · Rs. '+fmt(b.total)+'<br><small style="color:#666">'+esc(new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</small><br><small style="color:#666">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</small><br><button onclick="viewBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;margin-right:6px;padding:8px 12px;border:1px solid #111;background:#111;color:#f3d27a;border-radius:6px;font-weight:700">View bill</button><button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;padding:8px 12px;border:1px solid #111;background:#fff;color:#111;border-radius:6px;font-weight:700">Download bill</button></div>').join(""):'<p style="color:#666">No orders on this phone yet.</p>');
 }
 function closeMyOrders(){
-  if(history.state&&history.state.mo){history.back();}else{removeMyOrders();}
+  if(curV()==="mo"){history.back();}else{removeMyOrders();}
 }
 function removeMyOrders(){const b=$("#moModal");if(b)b.remove();}
 // "My orders / Bills" sits at the bottom of the side menu (uses the same style as the menu items).
