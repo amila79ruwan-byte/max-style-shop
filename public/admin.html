@@ -205,13 +205,18 @@ async function setOrderStatus(id,status){
 }
 $("#oreload").onclick=loadOrders;
 
-// Home screen with two buttons: Products / Orders
-function showView(v){
+// Home screen with two buttons: Products / Orders.
+// The phone back button goes back to the home screen (instead of leaving the page).
+function showView(v,fromHistory){
   $("#home").style.display=v==="home"?"block":"none";
   $("#vProducts").style.display=v==="products"?"block":"none";
   $("#vOrders").style.display=v==="orders"?"block":"none";
   window.scrollTo(0,0);
+  if(fromHistory)return;
+  if(v==="home"){ if(history.state&&history.state.av)history.back(); }
+  else if(!(history.state&&history.state.av===v))history.pushState({av:v},"");
 }
+window.addEventListener("popstate",e=>showView((e.state&&e.state.av)||"home",true));
 $("#gProducts").onclick=()=>showView("products");
 $("#gOrders").onclick=()=>showView("orders");
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showView("home"));
