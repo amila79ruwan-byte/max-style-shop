@@ -3,13 +3,17 @@ const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const fmt=n=>Number(n).toLocaleString("en-US");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const listOf=v=>String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
-let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(),cat="all",term="",onlyWish=false;
+let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(loadWish()),cat="all",term="",onlyWish=false;
 let detail=null,dSize="",dColor="",dQty=1,dChart=false;
 $("#wa").href="https://wa.me/"+WHATSAPP;
 
 // Keep the cart in the browser so it survives a page refresh.
 function loadCart(){try{return JSON.parse(localStorage.getItem("maxstyle_cart")||"{}")||{};}catch(e){return {};}}
 function saveCart(){try{localStorage.setItem("maxstyle_cart",JSON.stringify(cart));}catch(e){}}
+
+// Keep the wishlist in the browser so it survives a page refresh.
+function loadWish(){try{return JSON.parse(localStorage.getItem("maxstyle_wish")||"[]")||[];}catch(e){return [];}}
+function saveWish(){try{localStorage.setItem("maxstyle_wish",JSON.stringify([...wish]));}catch(e){}}
 
 // Cart keys look like "productId|size|color".
 function parseKey(k){const [id,size="",color=""]=k.split("|");return {id,size,color};}
@@ -62,132 +66,4 @@ function openDetail(id){
   $("#pmodal").classList.add("on");
 }
 function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=null;}
-// Closing the popup: the back button closes the popup first, not the whole page.
-function closeDetail(){
-  if(history.state&&history.state.pm){history.back();}else{hideModal();}
-}
-// Back button: close the product popup first, then the cart/menu drawer, and only then leave the page.
-window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else hideDrawers();});
-
-// Swipeable photo strip if the product has extra photos, otherwise the main photo.
-function photosHtml(p){
-  if(p.photos&&p.photos.length)return '<div class="gal">'+p.photos.map(x=>'<img src="'+x.url+'" alt="">').join("")+'</div>';
-  return '<div class="pm-img">'+(p.image?'<img src="'+p.image+'" alt="">':esc(p.name.charAt(0)))+'</div>';
-}
-function renderDetail(){
-  const p=detail;
-  const chart=p.chart?chartTable(p.chart):"";
-  $("#pmBox").innerHTML=
-    '<button class="pm-x" data-x aria-label="Close">×</button>'
-    +photosHtml(p)
-    +'<h2>'+esc(p.name)+'</h2>'
-    +'<div class="pm-price">Rs. '+fmt(p.price)+'</div>'
-    +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
-    +(p.colorList.length
-      ?'<div class="pm-lbl">Color'+(dColor?': '+esc(dColor):'')+'</div><div class="pm-opts">'
-        +p.colorList.map(c=>'<button class="pm-opt'+(dColor===c.name?' on':'')+'" data-kind="color" data-val="'+esc(c.name)+'"><i class="pm-dot" style="background:'+esc(c.hex)+'"></i>'+esc(c.name)+'</button>').join("")+'</div>'
-      :'')
-    +(p.sizes.length
-      ?'<div class="pm-lbl">Size'+(dSize?': '+esc(dSize):'')+'</div><div class="pm-opts">'
-        +p.sizes.map(s=>'<button class="pm-opt'+(dSize===s?' on':'')+'" data-kind="size" data-val="'+esc(s)+'">'+esc(s)+'</button>').join("")+'</div>'
-        +(chart?'<button class="pm-link" data-chart>'+(dChart?'Hide size chart':'Size chart')+'</button>'+(dChart?chart:''):'')
-      :'')
-    +'<div class="pm-q"><button data-q="-1">−</button><span>'+dQty+'</span><button data-q="1">+</button></div>'
-    +'<button class="pm-add" data-add>Add to cart</button>';
-}
-function addFromDetail(){
-  const p=detail;
-  if(p.colorList.length&&!dColor){toast("Please select a color");return;}
-  if(p.sizes.length&&!dSize){toast("Please select a size");return;}
-  const k=p.id+"|"+dSize+"|"+dColor;
-  cart[k]=(cart[k]||0)+dQty;
-  renderCart();hideModal();openDr("cart");
-}
-
-function card(p){
-  const img=p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0));
-  return '<article class="card" onclick="openDetail('+p.id+')"><span class="new">NEW</span>'
-   +'<button class="heart'+(wish.has(p.id)?" on":"")+'" onclick="event.stopPropagation();toggleWish('+p.id+')" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></button>'
-   +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+'</div>'
-   +'<button class="add" onclick="event.stopPropagation();openDetail('+p.id+')">Add to cart</button></div></article>';
-}
-function renderGrid(){
-  const g=$("#grid");
-  if(status==="loading"){g.innerHTML='<p class="empty">Loading…</p>';return;}
-  if(status==="error"){g.innerHTML='<p class="empty">Could not load products. Please refresh.</p>';return;}
-  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&(cat==="all"||p.cat===cat)&&p.name.toLowerCase().includes(term));
-  g.innerHTML=list.length?list.map(card).join(""):'<p class="empty">'+(onlyWish?"Your wishlist is empty. Tap the heart on a product to save it.":"No products found.")+"</p>";
-  $$("#chips button").forEach(b=>b.classList.toggle("on",b.dataset.cat===cat));
-}
-function toggleWish(id){wish.has(id)?wish.delete(id):wish.add(id);$("#wcnt").textContent=wish.size;renderGrid();}
-function chg(k,d){cart[k]=(cart[k]||0)+d;if(cart[k]<=0)delete cart[k];renderCart();}
-function keys(){return Object.keys(cart).filter(k=>prodOf(k));}
-function renderCart(){
-  const ks=keys();let total=0,n=0;
-  $("#items").innerHTML=ks.length?ks.map(k=>{
-    const p=prodOf(k),{size,color}=parseKey(k);
-    total+=p.price*cart[k];n+=cart[k];
-    const opts=[size?"Size: "+size:"",color?"Color: "+color:""].filter(Boolean).join(" · ");
-    return '<div class="row"><span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button onclick="chg(\''+k+'\',-1)" aria-label="Remove one">−</button>'+cart[k]+'<button onclick="chg(\''+k+'\',1)" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
-  }).join(""):'<p class="note">Your cart is empty. Add something from the collection.</p>';
-  $("#total").textContent=fmt(total);$("#cnt").textContent=n;$("#cnt2").textContent=n;
-  saveCart();
-}
-// Side drawers (menu / cart) also use browser history, so the phone back button closes them.
-function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
-function openDr(id){
-  hideDrawers();
-  $("#"+id).classList.add("on");$("#ov").classList.add("on");
-  if(history.state&&history.state.pm)history.replaceState({dr:1},"");
-  else if(!(history.state&&history.state.dr))history.pushState({dr:1},"");
-}
-function closeDr(){
-  if(history.state&&history.state.dr){history.back();}else{hideDrawers();}
-}
-function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
-function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
-
-$("#menuBtn").onclick=()=>openDr("menu");
-$("#cartBtn").onclick=$("#cartBtn2").onclick=()=>openDr("cart");
-$("#ov").onclick=closeDr;
-$$("[data-close]").forEach(e=>e.addEventListener("click",closeDr));
-$$("[data-go]").forEach(e=>e.addEventListener("click",()=>go(e.dataset.go)));
-$$("[data-cat]").forEach(e=>e.addEventListener("click",()=>setCat(e.dataset.cat)));
-$("#wishBtn").onclick=()=>{cat="all";term="";onlyWish=!onlyWish;renderGrid();go("shop");};
-$("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();};
-$("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
-
-$("#order").onclick=async()=>{
-  const name=$("#name").value.trim(),phone=$("#phone").value.trim(),phone2=$("#phone2").value.trim(),district=$("#district").value,addr=$("#addr").value.trim(),ks=keys(),m=$("#msg");
-  m.style.color="#c62828";
-  if(!ks.length){m.textContent="Add at least one item first.";return;}
-  if(!name||!phone||!district||!addr){m.textContent="Please fill in your name, phone number, district and address.";return;}
-  m.style.color="#1a7f37";m.textContent="Placing your order…";
-  const items=ks.map(k=>{const {id,size,color}=parseKey(k);return {id,size,color,qty:cart[k]};});
-  let d={};
-  try{
-    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,phone1:phone,phone2,district,address:addr,items})});
-    d=await r.json();
-    if(!r.ok){m.style.color="#c62828";m.textContent=d.error||"Could not place order. Please try again.";return;}
-  }catch(e){m.style.color="#c62828";m.textContent="Network error. Please try again.";return;}
-
-  const lines=d.lines.map(l=>l.name+(l.size?" ("+l.size+")":"")+(l.color?" ["+l.color+"]":"")+" x"+l.qty+" = Rs. "+fmt(l.price*l.qty));
-  const text="New order "+d.code+" - Max Style\n"+lines.join("\n")+"\nTotal: Rs. "+fmt(d.total)+"\nName: "+name+"\nPhone: "+phone+(phone2?" / "+phone2:"")+"\nDistrict: "+district+"\nAddress: "+addr;
-  cart={};saveCart();renderCart();
-  ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
-  $("#district").value="";
-  m.style.color="#1a7f37";
-  m.innerHTML="Order "+d.code+" placed! Your tracking code is <b>"+d.code+"</b>. "
-    +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener">Send to WhatsApp</a>';
-};
-
-renderGrid();renderCart();
-fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();}).then(l=>{
-  PRODUCTS=l.map(p=>({...p,
-    image:p.has_image?"/api/image?id="+p.id+"&v="+p.updated:"",
-    sizes:p.sizes?String(p.sizes).split(",").map(s=>s.replace(/[^\w.\-\/ ]/g,"").trim()).filter(Boolean):[],
-    colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
-    desc:p.description||"",
-    chart:p.size_chart||""}));
-  status="ok";renderGrid();renderCart();
-}).catch(()=>{status="error";renderGrid();});
+// Closing the popup: the back button closes the popup first, not the whol
