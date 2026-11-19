@@ -3,7 +3,13 @@ const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: 
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const MAX_BANNERS = 6;
 
-export async function onRequestGet({ request, env }) {
+// Any unexpected error comes back as JSON with the message, instead of a blank Cloudflare error page.
+const safe = fn => async ctx => {
+  try { return await fn(ctx); }
+  catch (e) { return J({ error: "Server error: " + (e && e.message ? e.message : String(e)) }, 500); }
+};
+
+export const onRequestGet = safe(async ({ request, env }) => {
   if (ok(request, env)) {
     const { results } = await env.DB.prepare("SELECT id,image,text,link,pos,active FROM banners ORDER BY pos,id").all();
     return J(results);
@@ -12,9 +18,9 @@ export async function onRequestGet({ request, env }) {
     "SELECT id,image,text,link,pos FROM banners WHERE active=1 ORDER BY pos,id LIMIT ?"
   ).bind(MAX_BANNERS).all();
   return J(results);
-}
+});
 
-export async function onRequestPost({ request, env }) {
+export const onRequestPost = safe(async ({ request, env }) => {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
   const b = await request.json();
   const text = String(b.text || "").trim().slice(0, 120);
@@ -36,11 +42,11 @@ export async function onRequestPost({ request, env }) {
     "INSERT INTO banners (image,text,link,pos,active,created) VALUES (?,?,?,?,?,?)"
   ).bind(b.image, text, link, pos, active, Date.now()).run();
   return J({ ok: true, id: r.meta.last_row_id });
-}
+});
 
-export async function onRequestDelete({ request, env }) {
+export const onRequestDelete = safe(async ({ request, env }) => {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
   const id = new URL(request.url).searchParams.get("id");
   await env.DB.prepare("DELETE FROM banners WHERE id=?").bind(id).run();
   return J({ ok: true });
-}
+});
