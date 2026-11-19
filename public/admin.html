@@ -387,7 +387,7 @@ $("#oreset").onclick=async()=>{
   alert("All orders deleted. The next bill will be MS-1001.");
 };
 
-// Stats: totals, per day, per product (sold and left)
+// Stats: totals, per day, per product (sold and left), app installs
 async function loadStats(){
   $("#sbody").innerHTML='<p class="muted">Loading…</p>';
   const r=await fetch("/api/orders?stats=1",{headers:hdr()});
@@ -395,12 +395,17 @@ async function loadStats(){
   const s=await r.json();
   const card=(t,d)=>`<div class="sc"><div class="muted">${t}</div><b>Rs. ${money(d.revenue)}</b><div class="muted">${d.orders} orders · ${d.qty} items</div></div>`;
   $("#sbody").innerHTML=
-    `<div class="sgrid">${card("Today",s.today)}${card("All time",s.summary)}</div>`
+    `<div id="instBox" class="muted" style="margin-bottom:8px"></div>`
+    +`<div class="sgrid">${card("Today",s.today)}${card("All time",s.summary)}</div>`
     +(s.summary.cancelled?`<div class="muted">Cancelled orders (not counted): ${s.summary.cancelled}</div>`:"")
     +`<div class="sh">By day</div>`
     +(s.days.length?s.days.map(d=>`<div class="srow"><span><b>${esc(dayLabel(d.day+"T12:00:00+05:30"))}</b><br><span class="muted">${d.orders} orders · ${d.qty} items</span></span><b>Rs. ${money(d.revenue)}</b></div>`).join(""):'<p class="muted">No orders yet.</p>')
     +`<div class="sh">Products (sold / left)</div>`
     +s.products.map(p=>`<div class="item"><div>${p.id?'<span class="pcode">'+pcode(p.id)+'</span><br>':''}<b>${esc(p.name)}</b><br><span class="muted">Sold: <b>${p.sold}</b> · Rs. ${money(p.revenue)}</span></div><div class="side"><span class="muted">Left</span><br>${p.stock===null||p.stock===undefined?'<b>—</b>':p.stock<=0?'<b class="stk out">0</b>':'<b class="stk">'+p.stock+'</b>'}</div></div>`).join("");
+  // App installs count
+  fetch("/api/installs",{headers:hdr()}).then(x=>x.json()).then(d=>{
+    if(d.count!==undefined)$("#instBox").innerHTML="App installs: <b>"+d.count+"</b>";
+  }).catch(()=>{});
 }
 $("#sreload").onclick=loadStats;
 
