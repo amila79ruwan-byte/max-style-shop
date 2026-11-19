@@ -22,8 +22,11 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .item{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eee}
 .item img,.item .np{width:56px;height:70px;object-fit:cover;border-radius:6px;background:#eee;flex:none}
 .item div{flex:1;font-size:14px}
+.item div.side{flex:none;text-align:right}
 .pcode{display:inline-block;background:#111;color:#f3d27a;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:4px}
 .icode{display:inline-block;background:#111;color:#f3d27a;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;letter-spacing:.5px;margin-right:4px}
+.stk{color:#1a7f37;font-weight:700}
+.stk.out{color:#c62828}
 .msg{font-size:14px;margin-bottom:8px;color:#c62828}
 .hint{font-size:12px;color:#666;margin:-6px 0 10px}
 #prev{max-height:140px;margin-bottom:10px;border-radius:8px;display:none}
@@ -42,6 +45,13 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .ocard li{margin-bottom:4px}
 .ocard select{margin:6px 0 0;padding:8px;font-size:14px}
 .wa{display:inline-block;background:#25d366;color:#fff;text-decoration:none;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:700;margin-top:6px}
+.brow{display:flex;gap:8px;margin-top:8px}
+.brow button{margin:0;flex:1}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.sc{border:1px solid #eee;border-radius:8px;padding:10px}
+.sc b{display:block;font-size:17px;margin:2px 0}
+.sh{font-weight:700;margin:14px 0 6px}
+.srow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
 </style>
 </head>
 <body>
@@ -57,7 +67,8 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 
   <div id="home">
     <button id="gProducts" style="padding:18px;font-size:18px;margin-bottom:12px">Products</button>
-    <button id="gOrders" style="padding:18px;font-size:18px">Orders</button>
+    <button id="gOrders" style="padding:18px;font-size:18px;margin-bottom:12px">Orders</button>
+    <button id="gStats" style="padding:18px;font-size:18px">Stats</button>
   </div>
 
   <div id="vProducts" style="display:none">
@@ -67,6 +78,7 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
     <input id="name" placeholder="Product name">
     <input id="price" type="number" inputmode="numeric" placeholder="Price (Rs.)">
     <select id="cat"><option value="women">Women</option><option value="men">Men</option><option value="kids">Kids</option></select>
+    <input id="stock" type="number" inputmode="numeric" min="0" placeholder="Stock (how many available). Leave empty = not tracked">
     <input id="sizes" placeholder="Sizes, comma separated (e.g. S,M,L,XL). Leave empty for no sizes">
     <input id="colors" placeholder="Colors, comma separated. Add #hex for exact color, e.g. Black,Navy:#1f2a44,Beige:#d8c3a5. Leave empty for none">
     <textarea id="desc" placeholder="Description (fabric, care, details)"></textarea>
@@ -101,10 +113,38 @@ M|96|70"></textarea>
 
   <div id="vOrders" style="display:none">
   <button class="sec" data-back>← Back</button>
+
+  <div class="box" id="oedit" style="display:none">
+    <b id="oe_title">Edit order</b><br><br>
+    <input id="oe_name" placeholder="Customer name">
+    <input id="oe_p1" inputmode="tel" placeholder="Phone number (WhatsApp)">
+    <input id="oe_p2" inputmode="tel" placeholder="Alternate phone number (optional)">
+    <select id="oe_dist"></select>
+    <textarea id="oe_addr" placeholder="Delivery address"></textarea>
+    <button id="oe_save">Save changes</button>
+    <button class="sec" id="oe_cancel">Cancel</button>
+    <div class="msg" id="oe_msg"></div>
+  </div>
+
   <div class="box">
     <div class="orow"><b>Orders</b><button class="sec" id="oreload" style="width:auto;margin:0;padding:8px 12px">Refresh</button></div>
     <div class="muted" id="ocount" style="margin:6px 0 8px"></div>
     <div id="olist"></div>
+  </div>
+
+  <div class="box">
+    <b>Reset orders</b>
+    <div class="hint" style="margin:6px 0 10px">Deletes ALL orders and restarts bill numbers from MS-1001. Stock of non-cancelled orders is put back. This cannot be undone.</div>
+    <button class="del" id="oreset" style="width:100%;padding:12px">Reset all orders</button>
+  </div>
+  </div>
+
+  <div id="vStats" style="display:none">
+  <button class="sec" data-back>← Back</button>
+  <div class="box">
+    <div class="orow"><b>Stats</b><button class="sec" id="sreload" style="width:auto;margin:0;padding:8px 12px">Refresh</button></div>
+    <div class="hint" style="margin:6px 0 0">Cancelled orders are not counted. Days change at 00:00 (Sri Lanka time).</div>
+    <div id="sbody" style="margin-top:10px"></div>
   </div>
   </div>
 </div>
@@ -113,6 +153,8 @@ M|96|70"></textarea>
 const $=s=>document.querySelector(s);
 let pw=sessionStorage.getItem("pw")||"", image="", editId=null, items=[];
 const hdr=()=>({"content-type":"application/json","x-admin-password":pw});
+const DISTRICTS=["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle","Matara","Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu","Batticaloa","Ampara","Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa","Badulla","Monaragala","Ratnapura","Kegalle"];
+$("#oe_dist").innerHTML=DISTRICTS.map(d=>`<option>${d}</option>`).join("");
 
 // Automatic product code: made from the product id (id 7 -> MS-P0007).
 const pcode=id=>"MS-P"+String(id).padStart(4,"0");
@@ -125,6 +167,12 @@ function itemCode(i){
     if(p)id=p.id;
   }
   return id?pcode(id):"";
+}
+// Stock text: empty stock = not tracked.
+function stockHtml(s){
+  if(s===null||s===undefined)return '<span class="muted">Stock: not tracked</span>';
+  if(s<=0)return '<span class="stk out">SOLD OUT</span>';
+  return '<span class="stk">Stock: '+s+'</span>';
 }
 
 async function shrink(file){
@@ -158,20 +206,21 @@ function renderList(){
   $("#pcnt").textContent=term?(list.length+" of "+items.length+" products"):(items.length+" products");
   $("#list").innerHTML=list.length?list.map(p=>`<div class="item">
     ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
-    <div><span class="pcode">${pcode(p.id)}</span><br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${esc(p.cat)}</div>
+    <div><span class="pcode">${pcode(p.id)}</span><br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${esc(p.cat)}<br>${stockHtml(p.stock)}</div>
     <button class="edt" onclick="edit(${p.id})">Edit</button>
     <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products yet.")+"</p>";
 }
 $("#psearch").addEventListener("input",renderList);
 function reset(){
   editId=null;image="";
-  ["#name","#price","#sizes","#colors","#desc","#chart","#file"].forEach(s=>$(s).value="");
+  ["#name","#price","#stock","#sizes","#colors","#desc","#chart","#file"].forEach(s=>$(s).value="");
   $("#prev").style.display="none";$("#ftitle").textContent="Add product";$("#cancel").style.display="none";
   loadPhotos();
 }
 function edit(id){
   const p=items.find(x=>x.id==id);editId=id;image="";
   $("#name").value=p.name;$("#price").value=p.price;$("#cat").value=p.cat;
+  $("#stock").value=(p.stock===null||p.stock===undefined)?"":p.stock;
   $("#sizes").value=p.sizes||"";$("#colors").value=p.colors||"";
   $("#desc").value=p.description||"";$("#chart").value=p.size_chart||"";
   $("#ftitle").textContent="Edit product "+pcode(id)+" (leave photo empty to keep it)";$("#cancel").style.display="block";
@@ -211,8 +260,8 @@ $("#pup").onclick=async()=>{
   loadPhotos();
 };
 
-// Orders (tracking): list, status change, WhatsApp to customer, bill
-let ORD={};
+// Orders (tracking): list, status change, edit, delete, WhatsApp to customer, bill
+let ORD={}, OEID=null;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const STATUSES=[["received","Received"],["confirmed","Confirmed"],["packed","Packed"],["out","Out for delivery"],["delivered","Delivered"],["cancelled","Cancelled"]];
 const waNum=p=>{let d=String(p||"").replace(/\D/g,"");if(d.startsWith("0"))d="94"+d.slice(1);return d;};
@@ -233,6 +282,7 @@ async function loadOrders(){
   const r=await fetch("/api/orders",{headers:hdr()});
   if(!r.ok){$("#olist").innerHTML='<p class="msg">Could not load orders.</p>';return;}
   const orders=await r.json();
+  ORD={};
   orders.forEach(o=>ORD[o.id]=o);
   $("#ocount").textContent=orders.length+" orders";
 
@@ -266,14 +316,70 @@ async function loadOrders(){
       </div>
       <a class="wa" href="https://wa.me/${waNum(o.phone1)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp customer</a>
       <button class="sec" style="margin-top:8px" onclick="printBill(${o.id})">Bill / Print</button>
+      <div class="brow"><button class="edt" onclick="editOrder(${o.id})">Edit</button><button class="del" onclick="delOrder(${o.id})">Delete</button></div>
     </div>`;}).join(""):"<p>No orders yet.</p>";
 }
 async function setOrderStatus(id,status){
   const r=await fetch("/api/orders",{method:"PUT",headers:hdr(),body:JSON.stringify({id,status})});
   if(!r.ok)alert("Could not update status.");
-  loadOrders();
+  await load();loadOrders();
 }
 $("#oreload").onclick=async()=>{await load();loadOrders();};
+
+// Edit customer details of an order
+function editOrder(id){
+  const o=ORD[id];if(!o)return;
+  OEID=id;
+  $("#oe_title").textContent="Edit order "+o.code;
+  $("#oe_name").value=o.name||"";$("#oe_p1").value=o.phone1||"";$("#oe_p2").value=o.phone2||"";
+  $("#oe_dist").value=o.district;$("#oe_addr").value=o.address||"";
+  $("#oe_msg").textContent="";
+  $("#oedit").style.display="block";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("#oe_cancel").onclick=()=>{OEID=null;$("#oedit").style.display="none";};
+$("#oe_save").onclick=async()=>{
+  $("#oe_msg").textContent="Saving…";
+  const r=await fetch("/api/orders",{method:"PUT",headers:hdr(),body:JSON.stringify({id:OEID,name:$("#oe_name").value,phone1:$("#oe_p1").value,phone2:$("#oe_p2").value,district:$("#oe_dist").value,address:$("#oe_addr").value})});
+  if(r.ok){OEID=null;$("#oedit").style.display="none";loadOrders();}
+  else{$("#oe_msg").textContent=(await r.json()).error||"Error";}
+};
+
+// Delete one order
+async function delOrder(id){
+  const o=ORD[id];if(!o)return;
+  if(!confirm("Delete order "+o.code+" ("+o.name+")? This cannot be undone."))return;
+  const r=await fetch("/api/orders?id="+id,{method:"DELETE",headers:hdr()});
+  if(!r.ok){alert("Could not delete the order.");return;}
+  await load();loadOrders();
+}
+
+// Reset all orders (bill numbers start again from MS-1001)
+$("#oreset").onclick=async()=>{
+  const t=prompt("This deletes ALL orders and restarts bill numbers from MS-1001.\nThis cannot be undone.\n\nType RESET to confirm:");
+  if(t!=="RESET"){if(t!==null)alert("Not reset. You must type RESET.");return;}
+  const r=await fetch("/api/orders?all=1&confirm=RESET",{method:"DELETE",headers:hdr()});
+  if(!r.ok){alert("Could not reset orders.");return;}
+  await load();loadOrders();
+  alert("All orders deleted. The next bill will be MS-1001.");
+};
+
+// Stats: totals, per day, per product (sold and left)
+async function loadStats(){
+  $("#sbody").innerHTML='<p class="muted">Loading…</p>';
+  const r=await fetch("/api/orders?stats=1",{headers:hdr()});
+  if(!r.ok){$("#sbody").innerHTML='<p class="msg">Could not load stats.</p>';return;}
+  const s=await r.json();
+  const card=(t,d)=>`<div class="sc"><div class="muted">${t}</div><b>Rs. ${money(d.revenue)}</b><div class="muted">${d.orders} orders · ${d.qty} items</div></div>`;
+  $("#sbody").innerHTML=
+    `<div class="sgrid">${card("Today",s.today)}${card("All time",s.summary)}</div>`
+    +(s.summary.cancelled?`<div class="muted">Cancelled orders (not counted): ${s.summary.cancelled}</div>`:"")
+    +`<div class="sh">By day</div>`
+    +(s.days.length?s.days.map(d=>`<div class="srow"><span><b>${esc(dayLabel(d.day+"T12:00:00+05:30"))}</b><br><span class="muted">${d.orders} orders · ${d.qty} items</span></span><b>Rs. ${money(d.revenue)}</b></div>`).join(""):'<p class="muted">No orders yet.</p>')
+    +`<div class="sh">Products (sold / left)</div>`
+    +s.products.map(p=>`<div class="item"><div>${p.id?'<span class="pcode">'+pcode(p.id)+'</span><br>':''}<b>${esc(p.name)}</b><br><span class="muted">Sold: <b>${p.sold}</b> · Rs. ${money(p.revenue)}</span></div><div class="side"><span class="muted">Left</span><br>${p.stock===null||p.stock===undefined?'<b>—</b>':p.stock<=0?'<b class="stk out">0</b>':'<b class="stk">'+p.stock+'</b>'}</div></div>`).join("");
+}
+$("#sreload").onclick=loadStats;
 
 // Customer bill for one order (opens in a new tab, then Print)
 function printBill(id){
@@ -293,13 +399,15 @@ function printBill(id){
   w.document.write(html);w.document.close();
 }
 
-// Home screen with two buttons: Products / Orders
+// Home screen with three buttons: Products / Orders / Stats
 // The phone back button goes back to the home screen (instead of leaving the page).
 function showView(v,fromHistory){
   $("#home").style.display=v==="home"?"block":"none";
   $("#vProducts").style.display=v==="products"?"block":"none";
   $("#vOrders").style.display=v==="orders"?"block":"none";
+  $("#vStats").style.display=v==="stats"?"block":"none";
   window.scrollTo(0,0);
+  if(v==="stats")loadStats();
   if(fromHistory)return;
   if(v==="home"){ if(history.state&&history.state.av)history.back(); }
   else if(!(history.state&&history.state.av===v))history.pushState({av:v},"");
@@ -307,6 +415,7 @@ function showView(v,fromHistory){
 window.addEventListener("popstate",e=>showView((e.state&&e.state.av)||"home",true));
 $("#gProducts").onclick=()=>showView("products");
 $("#gOrders").onclick=()=>showView("orders");
+$("#gStats").onclick=()=>showView("stats");
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showView("home"));
 
 $("#go").onclick=()=>{pw=$("#pw").value;login();};
@@ -316,7 +425,7 @@ $("#file").onchange=async e=>{
   image=await shrink(f);$("#prev").src=image;$("#prev").style.display="block";
 };
 $("#save").onclick=async()=>{
-  const body={id:editId,name:$("#name").value,price:$("#price").value,cat:$("#cat").value,
+  const body={id:editId,name:$("#name").value,price:$("#price").value,cat:$("#cat").value,stock:$("#stock").value,
     sizes:$("#sizes").value,colors:$("#colors").value,description:$("#desc").value,size_chart:$("#chart").value};
   if(image)body.image=image;
   $("#msg").textContent="Saving…";
