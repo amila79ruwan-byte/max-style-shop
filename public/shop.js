@@ -153,7 +153,7 @@ function renderCart(){
     const thumb=p.image?'<img src="'+p.image+'" alt="" style="width:52px;height:64px;object-fit:cover;border-radius:6px;flex:none">':'';
     return '<div class="row">'+thumb+'<span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button onclick="chg(\''+k+'\',-1)" aria-label="Remove one">−</button>'+cart[k]+'<button onclick="chg(\''+k+'\',1)" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
   }).join(""):'<p class="note">Your cart is empty. Add something from the collection.</p>';
-  $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;$("#cnt2").textContent=n;
+  $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;
   saveCart();
 }
 // Side drawers (menu / cart). Each one adds a history step, so the phone back button closes it.
@@ -177,7 +177,7 @@ function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"
 function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
 
 $("#menuBtn").onclick=()=>openDr("menu");
-$("#cartBtn").onclick=$("#cartBtn2").onclick=()=>openDr("cart");
+$("#cartBtn").onclick=()=>openDr("cart");
 $("#ov").onclick=closeDr;
 $$("[data-close]").forEach(e=>e.addEventListener("click",closeDr));
 $$("[data-go]").forEach(e=>e.addEventListener("click",()=>go(e.dataset.go)));
