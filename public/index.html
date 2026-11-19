@@ -17,6 +17,31 @@
 .co .pay small{margin-left:auto;font-size:11px}
 .co .dnote{display:flex;align-items:center;gap:8px;background:#f7f4ea;border-radius:8px;padding:8px 10px;font-size:13px;margin:8px 0 12px}
 
+/* chips: one row, swipe sideways */
+#chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#chips::-webkit-scrollbar{display:none}
+#chips button{flex:none;white-space:nowrap}
+
+/* ===== Side menu (Alnasser style) ===== */
+#menu{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#menu .mq{display:flex;align-items:center;gap:10px;margin:14px 16px 8px;padding:0 16px;height:46px;background:#eee;border-radius:999px}
+#menu .mq svg{width:20px;height:20px;flex:none;fill:none;stroke:#111;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#menu .mq input{flex:1;min-width:0;border:0;background:transparent;outline:0;font:inherit;font-size:15px;padding:0;margin:0;height:100%}
+#menu .mi{display:flex;align-items:center;justify-content:space-between;width:calc(100% - 32px);margin:0 16px;padding:22px 4px;border:0;border-bottom:1px solid #ddd;border-radius:0;background:none;color:#111;font:inherit;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;text-align:left;cursor:pointer}
+#menu .mi svg{width:22px;height:22px;flex:none;fill:none;stroke:#111;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#menu .mg{display:flex;align-items:center;justify-content:space-between;width:calc(100% - 32px);margin:0 16px;padding:22px 4px;border:0;border-bottom:1px solid #ddd;border-radius:0;background:none;color:#111;font:inherit;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;text-align:left;cursor:pointer}
+#menu .mg svg{width:22px;height:22px;flex:none;fill:none;stroke:#111;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+#menu .mg[aria-expanded="true"] svg{transform:rotate(90deg)}
+#menu .sub{display:none;background:#fafafa}
+#menu .sub.open{display:block}
+#menu .sub .mi{font-size:15px;font-weight:600;padding:18px 4px 18px 16px}
+#menu .mi.off{color:#c0392b}
+#menu .mi.off svg{stroke:#c0392b}
+#menu .mi:active{background:#f5f5f5}
+#menu .ml{display:flex;flex-direction:column;padding:12px 16px 28px}
+#menu .ml a{display:block;padding:14px 4px;font-size:15px;font-weight:600;color:#111;text-decoration:none}
+#menu .ml a.trk{margin-top:12px;padding:14px;border-radius:999px;background:#111;color:#fff;text-align:center;font-weight:700}
+
 /* ===== Banner slideshow ===== */
 .banner{overflow:hidden;position:relative;width:100%}
 .banner .bn-track{display:flex;width:100%;transition:transform .6s ease;will-change:transform}
@@ -58,7 +83,7 @@
 
   <h2 class="title" id="shop">OUR COLLECTION</h2>
   <div class="chips" id="chips">
-    <button class="on" data-cat="all">All</button><button data-cat="women">Women</button><button data-cat="men">Men</button><button data-cat="kids">Kids</button>
+    <button class="on" data-cat="all">All</button><button data-cat="women">Women</button><button data-cat="men">Men</button><button data-cat="kids">Kids</button><button data-cat="phone">Phone Accessories</button><button data-cat="toys">Toys</button><button data-cat="electric">Electrical</button><button data-cat="umbrella">Umbrellas</button><button data-cat="bags">Bags</button><button data-cat="school">School &amp; Books</button>
   </div>
   <div class="pgrid" id="grid"></div>
 </main>
@@ -80,12 +105,26 @@
 
 <aside class="dr" id="menu" aria-label="Menu">
   <div class="dh">Menu <button class="ib" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>
-  <button class="mi" data-cat="women">Womens</button>
-  <button class="mi" data-cat="men">Mens</button>
-  <button class="mi" data-cat="kids">Kids</button>
-  <button class="mi" data-cat="all">New Arrivals</button>
-  <button class="mi off" data-cat="all">Offers</button>
-  <div class="ml"><a href="#contact" data-close>Contact Us</a><a href="#contact" data-close>Delivery and Returns</a><a href="track.html">Track my order</a></div>
+  <div class="mq"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mq" type="search" placeholder="Search products" enterkeyhint="search"></div>
+  <button class="mg" id="clothGrp" type="button" aria-expanded="false"><span>Dresses</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <div class="sub" id="clothSub">
+    <button class="mi" data-cat="women"><span>Women</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="mi" data-cat="men"><span>Men</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="mi" data-cat="kids"><span>Kids</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+  <button class="mi" data-cat="phone"><span>Phone Accessories</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi" data-cat="toys"><span>Toys</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi" data-cat="electric"><span>Electrical Items</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi" data-cat="umbrella"><span>Umbrellas</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi" data-cat="bags"><span>Bags</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi" data-cat="school"><span>School Items &amp; Books</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi" data-cat="all"><span>New Arrivals</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="mi off" data-cat="all"><span>Offers</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <div class="ml">
+    <a href="#contact" data-close>Contact Us</a>
+    <a href="#contact" data-close>Delivery and Returns</a>
+    <a class="trk" href="track.html">Track Order</a>
+  </div>
 </aside>
 
 <aside class="dr" id="cart" aria-label="Cart">
@@ -129,6 +168,36 @@
 <script src="lang.js"></script>
 <script src="shop.js"></script>
 <script src="account.js"></script>
+
+<!-- Side menu: expand/collapse Clothing group -->
+<script>
+(function(){
+  var g=document.getElementById('clothGrp'),s=document.getElementById('clothSub');
+  if(!g||!s)return;
+  g.addEventListener('click',function(){
+    var o=s.classList.toggle('open');
+    g.setAttribute('aria-expanded',o?'true':'false');
+  });
+})();
+</script>
+
+<!-- Side menu search: reuses the main search box, then closes the menu -->
+<script>
+(function(){
+  var mq=document.getElementById('mq'),q=document.getElementById('q');
+  if(!mq||!q)return;
+  function run(){
+    q.value=mq.value;
+    q.dispatchEvent(new Event('input',{bubbles:true}));
+    var c=document.querySelector('#menu [data-close]');
+    if(c)c.click();
+    var s=document.getElementById('shop');
+    if(s)s.scrollIntoView({behavior:'smooth'});
+  }
+  mq.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();run()}});
+  mq.addEventListener('search',run);
+})();
+</script>
 
 <!-- Banner slideshow: loads active banners from /api/banners, auto-slides, swipe on phone -->
 <script>
