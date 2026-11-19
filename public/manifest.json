@@ -1,11 +1,11 @@
 {
-  "id": "/admin.html",
-  "name": "Max Style Admin",
-  "short_name": "Max Admin",
-  "start_url": "admin.html",
-  "scope": "./",
+  "id": "/",
+  "name": "Max Style",
+  "short_name": "Max Style",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f5f5f5",
+  "background_color": "#ffffff",
   "theme_color": "#111111",
   "icons": [
     { "src": "1042795727_1794864022407312~2.jpg", "sizes": "any", "type": "image/jpeg" }
