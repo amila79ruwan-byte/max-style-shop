@@ -44,3 +44,13 @@ if (isIOS && !isStandalone && !wasDismissed()) {
   setTimeout(() => showBox('<span style="flex:1">Install කරන්න: Safari එකේ <b>Share</b> (⬆) → <b>Add to Home Screen</b></span>'
     + '<button data-no style="background:none;border:0;color:#fff;font-size:18px">✕</button>'), 3000);
 }
+// Count each phone once when the app is opened as an installed app.
+function countInstall() {
+  try {
+    if (localStorage.getItem("maxstyle_install_counted") === "1") return;
+    localStorage.setItem("maxstyle_install_counted", "1");
+  } catch (e) {}
+  fetch("/api/installs", { method: "POST" }).catch(() => {});
+}
+if (isStandalone) countInstall();
+window.addEventListener("appinstalled", countInstall);
