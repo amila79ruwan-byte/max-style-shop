@@ -366,10 +366,13 @@ $("#menu").appendChild(moBtn);
 
 
 // ---- Auto-sliding products strip (moves by itself, pauses while touched) ----
+// Shows products that have feat_order 1-15 (from admin), in that order. If none are set, shows the first 15.
 let featTimer=null;
 function renderFeatured(){
   const f=$("#feat");if(!f)return;
-  const list=PRODUCTS.slice(0,15);
+  let list=PRODUCTS.filter(p=>Number(p.feat_order)>0)
+    .sort((a,b)=>Number(a.feat_order)-Number(b.feat_order)).slice(0,15);
+  if(!list.length)list=PRODUCTS.slice(0,15);
   f.innerHTML=list.map(p=>'<div class="fi" onclick="openDetail('+p.id+')"><div class="fp">'+(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fn">'+esc(p.name)+'</div><div class="fr">Rs. '+fmt(p.price)+'</div></div>').join("");
   startFeat();
 }
