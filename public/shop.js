@@ -71,7 +71,7 @@ function closeDetail(){
   if(history.state&&history.state.pm){history.back();}else{hideModal();}
 }
 // Back button: close the product popup first, then the cart/menu drawer, and only then leave the page.
-window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else hideDrawers();});
+window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else if($("#moModal"))removeMyOrders();else hideDrawers();});
 
 // Swipeable photo strip if the product has extra photos, otherwise the main photo.
 function photosHtml(p){
@@ -184,7 +184,7 @@ $("#order").onclick=async()=>{
   ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
   $("#district").value="";
   m.style.color="#1a7f37";
-  m.innerHTML="Order "+d.code+" placed! Your tracking code is <b>"+d.code+"</b>. "
+  m.innerHTML="Order "+d.code+" placed! Your tracking code is <b>"+d.code+"</b>. <br>Delivery within 5 working days, expected by <b>"+deliveryText(bill.created)+"</b>. "
     +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener">Send to WhatsApp</a>';
   m.insertAdjacentHTML("beforeend",' <br><button onclick="downloadBillByCode(\''+d.code+'\')" style="margin-top:8px;padding:10px 14px;border:1px solid #111;background:#fff;color:#111;border-radius:8px;font-weight:700">Download bill</button>');
 };
@@ -195,12 +195,18 @@ function saveMyOrder(b){
   const l=loadMyOrders().filter(x=>x.code!==b.code);l.unshift(b);
   try{localStorage.setItem("maxstyle_orders",JSON.stringify(l.slice(0,30)));}catch(e){}
 }
+// Expected delivery date: 5 working days (Mon-Fri) after the order date.
+function deliveryText(created){
+  const d=new Date(created);let n=0;
+  while(n<5){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)n++;}
+  return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Colombo"});
+}
 function billHtml(b){
   const rows=b.items.map(i=>'<tr><td>'+esc(i.name)+(i.size?' ('+esc(i.size)+')':'')+(i.color?'<br><small>'+esc(i.color)+'</small>':'')+'</td><td>'+i.qty+'</td><td style="text-align:right">Rs. '+fmt(i.amount)+'</td></tr>').join("");
   const when=new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill '+esc(b.code)+'</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.tot{font-size:18px;font-weight:700;text-align:right;margin-top:10px}</style></head><body>'
    +'<h1>Max Style</h1><div class="sub">Style without limits · 0722555929</div>'
-   +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span></p>'
+   +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span><br><span class="sub">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</span></p>'
    +(b.name?'<p><b>'+esc(b.name)+'</b><br><span class="sub">'+esc(b.phone1)+(b.phone2?' / '+esc(b.phone2):'')+'<br>'+esc(b.address)+'<br>'+esc(b.district)+'</span></p>':'')
    +'<table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr>'+rows+'</table>'
    +'<div class="tot">Total: Rs. '+fmt(b.total)+'</div><p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
@@ -212,25 +218,31 @@ function downloadBill(b){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
 }
 function downloadBillByCode(code){const b=loadMyOrders().find(x=>x.code===code);if(b)downloadBill(b);}
+// My orders opens as a full page (not a popup). The phone back button closes it.
 function openMyOrders(){
+  hideDrawers();
   let box=$("#moModal");
   if(!box){
     box=document.createElement("div");box.id="moModal";
-    box.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:85;display:flex;align-items:flex-end;justify-content:center";
-    box.innerHTML='<div id="moBox" style="background:#fff;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px;position:relative"></div>';
-    box.addEventListener("click",e=>{if(e.target===box)box.remove();});
+    box.style.cssText="position:fixed;inset:0;background:#fff;z-index:85;overflow-y:auto;padding:16px";
     document.body.appendChild(box);
   }
+  if(history.state&&history.state.dr)history.replaceState({mo:1},"");
+  else if(!(history.state&&history.state.mo))history.pushState({mo:1},"");
   const list=loadMyOrders();
-  $("#moBox").innerHTML='<button onclick="document.getElementById(\'moModal\').remove()" style="position:absolute;right:12px;top:10px;background:none;border:0;font-size:26px;color:#111;width:auto;padding:0">×</button>'
+  box.innerHTML='<button class="sec" onclick="closeMyOrders()" style="width:auto;padding:10px 14px;margin-bottom:12px">← Back</button>'
     +'<h2 style="font-size:20px;margin-bottom:10px">My orders</h2>'
-    +(list.length?list.map(b=>'<div style="border-bottom:1px solid #eee;padding:10px 0"><b>'+esc(b.code)+'</b> · Rs. '+fmt(b.total)+'<br><small style="color:#666">'+esc(new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</small><br><button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;padding:8px 12px;border:1px solid #111;background:#fff;color:#111;border-radius:6px;font-weight:700">Download bill</button></div>').join(""):'<p style="color:#666">No orders on this phone yet.</p>');
+    +(list.length?list.map(b=>'<div style="border-bottom:1px solid #eee;padding:10px 0"><b>'+esc(b.code)+'</b> · Rs. '+fmt(b.total)+'<br><small style="color:#666">'+esc(new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</small><br><small style="color:#666">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</small><br><button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;padding:8px 12px;border:1px solid #111;background:#fff;color:#111;border-radius:6px;font-weight:700">Download bill</button></div>').join(""):'<p style="color:#666">No orders on this phone yet.</p>');
 }
+function closeMyOrders(){
+  if(history.state&&history.state.mo){history.back();}else{removeMyOrders();}
+}
+function removeMyOrders(){const b=$("#moModal");if(b)b.remove();}
 // "My orders / Bills" sits at the bottom of the side menu (uses the same style as the menu items).
 const moBtn=document.createElement("button");
 moBtn.className="mi";
 moBtn.textContent="My orders / Bills";
-moBtn.onclick=()=>{closeDr();openMyOrders();};
+moBtn.onclick=()=>openMyOrders();
 $("#menu").appendChild(moBtn);
 
 $("#wcnt").textContent=wish.size;
