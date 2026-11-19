@@ -1,6 +1,7 @@
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const normList = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(s => String(s).trim()).filter(Boolean).join(",");
+const CATS = ["women", "men", "kids", "phone", "toys", "electric", "umbrella", "bags", "school"];
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(
@@ -14,7 +15,7 @@ export async function onRequestPost({ request, env }) {
   const b = await request.json();
   if (b.check) return J({ ok: true });
   const name = String(b.name || "").trim(), price = parseInt(b.price, 10), cat = b.cat;
-  if (!name || !(price >= 0) || !["men", "women", "kids"].includes(cat)) return J({ error: "Invalid data" }, 400);
+  if (!name || !(price >= 0) || !CATS.includes(cat)) return J({ error: "Invalid data" }, 400);
   const now = Date.now();
   const sizes = normList(b.sizes), colors = normList(b.colors);
   const description = String(b.description || "").trim().slice(0, 2000);
