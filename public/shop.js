@@ -66,4 +66,181 @@ function openDetail(id){
   $("#pmodal").classList.add("on");
 }
 function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=null;}
-// Closing the popup: the back button closes the popup first, not the whol
+// Closing the popup: the back button closes the popup first, not the whole page.
+function closeDetail(){
+  if(history.state&&history.state.pm){history.back();}else{hideModal();}
+}
+// Back button: close the product popup first, then the cart/menu drawer, and only then leave the page.
+window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else hideDrawers();});
+
+// Swipeable photo strip if the product has extra photos, otherwise the main photo.
+function photosHtml(p){
+  if(p.photos&&p.photos.length)return '<div class="gal">'+p.photos.map(x=>'<img src="'+x.url+'" alt="">').join("")+'</div>';
+  return '<div class="pm-img">'+(p.image?'<img src="'+p.image+'" alt="">':esc(p.name.charAt(0)))+'</div>';
+}
+function renderDetail(){
+  const p=detail;
+  const chart=p.chart?chartTable(p.chart):"";
+  $("#pmBox").innerHTML=
+    '<button class="pm-x" data-x aria-label="Close">×</button>'
+    +photosHtml(p)
+    +'<h2>'+esc(p.name)+'</h2>'
+    +'<div class="pm-price">Rs. '+fmt(p.price)+'</div>'
+    +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
+    +(p.colorList.length
+      ?'<div class="pm-lbl">Color'+(dColor?': '+esc(dColor):'')+'</div><div class="pm-opts">'
+        +p.colorList.map(c=>'<button class="pm-opt'+(dColor===c.name?' on':'')+'" data-kind="color" data-val="'+esc(c.name)+'"><i class="pm-dot" style="background:'+esc(c.hex)+'"></i>'+esc(c.name)+'</button>').join("")+'</div>'
+      :'')
+    +(p.sizes.length
+      ?'<div class="pm-lbl">Size'+(dSize?': '+esc(dSize):'')+'</div><div class="pm-opts">'
+        +p.sizes.map(s=>'<button class="pm-opt'+(dSize===s?' on':'')+'" data-kind="size" data-val="'+esc(s)+'">'+esc(s)+'</button>').join("")+'</div>'
+        +(chart?'<button class="pm-link" data-chart>'+(dChart?'Hide size chart':'Size chart')+'</button>'+(dChart?chart:''):'')
+      :'')
+    +'<div class="pm-q"><button data-q="-1">−</button><span>'+dQty+'</span><button data-q="1">+</button></div>'
+    +'<button class="pm-add" data-add>Add to cart</button>';
+}
+function addFromDetail(){
+  const p=detail;
+  if(p.colorList.length&&!dColor){toast("Please select a color");return;}
+  if(p.sizes.length&&!dSize){toast("Please select a size");return;}
+  const k=p.id+"|"+dSize+"|"+dColor;
+  cart[k]=(cart[k]||0)+dQty;
+  renderCart();hideModal();openDr("cart");
+}
+
+function card(p){
+  const img=p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0));
+  return '<article class="card" onclick="openDetail('+p.id+')"><span class="new">NEW</span>'
+   +'<button class="heart'+(wish.has(p.id)?" on":"")+'" onclick="event.stopPropagation();toggleWish('+p.id+')" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></button>'
+   +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+'</div>'
+   +'<button class="add" onclick="event.stopPropagation();openDetail('+p.id+')">Add to cart</button></div></article>';
+}
+function renderGrid(){
+  const g=$("#grid");
+  if(status==="loading"){g.innerHTML='<p class="empty">Loading…</p>';return;}
+  if(status==="error"){g.innerHTML='<p class="empty">Could not load products. Please refresh.</p>';return;}
+  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&(cat==="all"||p.cat===cat)&&p.name.toLowerCase().includes(term));
+  g.innerHTML=list.length?list.map(card).join(""):'<p class="empty">'+(onlyWish?"Your wishlist is empty. Tap the heart on a product to save it.":"No products found.")+"</p>";
+  $$("#chips button").forEach(b=>b.classList.toggle("on",b.dataset.cat===cat));
+}
+function toggleWish(id){wish.has(id)?wish.delete(id):wish.add(id);saveWish();$("#wcnt").textContent=wish.size;renderGrid();}
+function chg(k,d){cart[k]=(cart[k]||0)+d;if(cart[k]<=0)delete cart[k];renderCart();}
+function keys(){return Object.keys(cart).filter(k=>prodOf(k));}
+function renderCart(){
+  const ks=keys();let total=0,n=0;
+  $("#items").innerHTML=ks.length?ks.map(k=>{
+    const p=prodOf(k),{size,color}=parseKey(k);
+    total+=p.price*cart[k];n+=cart[k];
+    const opts=[size?"Size: "+size:"",color?"Color: "+color:""].filter(Boolean).join(" · ");
+    return '<div class="row"><span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button onclick="chg(\''+k+'\',-1)" aria-label="Remove one">−</button>'+cart[k]+'<button onclick="chg(\''+k+'\',1)" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
+  }).join(""):'<p class="note">Your cart is empty. Add something from the collection.</p>';
+  $("#total").textContent=fmt(total);$("#cnt").textContent=n;$("#cnt2").textContent=n;
+  saveCart();
+}
+// Side drawers (menu / cart) also use browser history, so the phone back button closes them.
+function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
+function openDr(id){
+  hideDrawers();
+  $("#"+id).classList.add("on");$("#ov").classList.add("on");
+  if(history.state&&history.state.pm)history.replaceState({dr:1},"");
+  else if(!(history.state&&history.state.dr))history.pushState({dr:1},"");
+}
+function closeDr(){
+  if(history.state&&history.state.dr){history.back();}else{hideDrawers();}
+}
+function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
+function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
+
+$("#menuBtn").onclick=()=>openDr("menu");
+$("#cartBtn").onclick=$("#cartBtn2").onclick=()=>openDr("cart");
+$("#ov").onclick=closeDr;
+$$("[data-close]").forEach(e=>e.addEventListener("click",closeDr));
+$$("[data-go]").forEach(e=>e.addEventListener("click",()=>go(e.dataset.go)));
+$$("[data-cat]").forEach(e=>e.addEventListener("click",()=>setCat(e.dataset.cat)));
+$("#wishBtn").onclick=()=>{cat="all";term="";onlyWish=!onlyWish;renderGrid();go("shop");};
+$("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();};
+$("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
+
+$("#order").onclick=async()=>{
+  const name=$("#name").value.trim(),phone=$("#phone").value.trim(),phone2=$("#phone2").value.trim(),district=$("#district").value,addr=$("#addr").value.trim(),ks=keys(),m=$("#msg");
+  m.style.color="#c62828";
+  if(!ks.length){m.textContent="Add at least one item first.";return;}
+  if(!name||!phone||!district||!addr){m.textContent="Please fill in your name, phone number, district and address.";return;}
+  m.style.color="#1a7f37";m.textContent="Placing your order…";
+  const items=ks.map(k=>{const {id,size,color}=parseKey(k);return {id,size,color,qty:cart[k]};});
+  let d={};
+  try{
+    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,phone1:phone,phone2,district,address:addr,items})});
+    d=await r.json();
+    if(!r.ok){m.style.color="#c62828";m.textContent=d.error||"Could not place order. Please try again.";return;}
+  }catch(e){m.style.color="#c62828";m.textContent="Network error. Please try again.";return;}
+
+  const lines=d.lines.map(l=>l.name+(l.size?" ("+l.size+")":"")+(l.color?" ["+l.color+"]":"")+" x"+l.qty+" = Rs. "+fmt(l.price*l.qty));
+  const text="New order "+d.code+" - Max Style\n"+lines.join("\n")+"\nTotal: Rs. "+fmt(d.total)+"\nName: "+name+"\nPhone: "+phone+(phone2?" / "+phone2:"")+"\nDistrict: "+district+"\nAddress: "+addr;
+  const bill={code:d.code,created:Date.now(),name,phone1:phone,phone2,district,address:addr,
+    items:d.lines.map(l=>({name:l.name,size:l.size,color:l.color,qty:l.qty,amount:l.price*l.qty})),total:d.total};
+  saveMyOrder(bill);
+  cart={};saveCart();renderCart();
+  ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
+  $("#district").value="";
+  m.style.color="#1a7f37";
+  m.innerHTML="Order "+d.code+" placed! Your tracking code is <b>"+d.code+"</b>. "
+    +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener">Send to WhatsApp</a>';
+  m.insertAdjacentHTML("beforeend",' <br><button onclick="downloadBillByCode(\''+d.code+'\')" style="margin-top:8px;padding:10px 14px;border:1px solid #111;background:#fff;color:#111;border-radius:8px;font-weight:700">Download bill</button>');
+};
+
+// ---- Bills and "My orders" (kept on this phone) ----
+function loadMyOrders(){try{return JSON.parse(localStorage.getItem("maxstyle_orders")||"[]")||[];}catch(e){return [];}}
+function saveMyOrder(b){
+  const l=loadMyOrders().filter(x=>x.code!==b.code);l.unshift(b);
+  try{localStorage.setItem("maxstyle_orders",JSON.stringify(l.slice(0,30)));}catch(e){}
+}
+function billHtml(b){
+  const rows=b.items.map(i=>'<tr><td>'+esc(i.name)+(i.size?' ('+esc(i.size)+')':'')+(i.color?'<br><small>'+esc(i.color)+'</small>':'')+'</td><td>'+i.qty+'</td><td style="text-align:right">Rs. '+fmt(i.amount)+'</td></tr>').join("");
+  const when=new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill '+esc(b.code)+'</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.tot{font-size:18px;font-weight:700;text-align:right;margin-top:10px}</style></head><body>'
+   +'<h1>Max Style</h1><div class="sub">Style without limits · 0722555929</div>'
+   +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span></p>'
+   +(b.name?'<p><b>'+esc(b.name)+'</b><br><span class="sub">'+esc(b.phone1)+(b.phone2?' / '+esc(b.phone2):'')+'<br>'+esc(b.address)+'<br>'+esc(b.district)+'</span></p>':'')
+   +'<table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr>'+rows+'</table>'
+   +'<div class="tot">Total: Rs. '+fmt(b.total)+'</div><p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
+}
+function downloadBill(b){
+  const blob=new Blob([billHtml(b)],{type:"text/html"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="MaxStyle-"+b.code+".html";
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function downloadBillByCode(code){const b=loadMyOrders().find(x=>x.code===code);if(b)downloadBill(b);}
+function openMyOrders(){
+  let box=$("#moModal");
+  if(!box){
+    box=document.createElement("div");box.id="moModal";
+    box.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:85;display:flex;align-items:flex-end;justify-content:center";
+    box.innerHTML='<div id="moBox" style="background:#fff;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px;position:relative"></div>';
+    box.addEventListener("click",e=>{if(e.target===box)box.remove();});
+    document.body.appendChild(box);
+  }
+  const list=loadMyOrders();
+  $("#moBox").innerHTML='<button onclick="document.getElementById(\'moModal\').remove()" style="position:absolute;right:12px;top:10px;background:none;border:0;font-size:26px;color:#111;width:auto;padding:0">×</button>'
+    +'<h2 style="font-size:20px;margin-bottom:10px">My orders</h2>'
+    +(list.length?list.map(b=>'<div style="border-bottom:1px solid #eee;padding:10px 0"><b>'+esc(b.code)+'</b> · Rs. '+fmt(b.total)+'<br><small style="color:#666">'+esc(new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</small><br><button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;padding:8px 12px;border:1px solid #111;background:#fff;color:#111;border-radius:6px;font-weight:700">Download bill</button></div>').join(""):'<p style="color:#666">No orders on this phone yet.</p>');
+}
+// "My orders / Bills" sits at the bottom of the side menu (uses the same style as the menu items).
+const moBtn=document.createElement("button");
+moBtn.className="mi";
+moBtn.textContent="My orders / Bills";
+moBtn.onclick=()=>{closeDr();openMyOrders();};
+$("#menu").appendChild(moBtn);
+
+$("#wcnt").textContent=wish.size;
+renderGrid();renderCart();
+fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();}).then(l=>{
+  PRODUCTS=l.map(p=>({...p,
+    image:p.has_image?"/api/image?id="+p.id+"&v="+p.updated:"",
+    sizes:p.sizes?String(p.sizes).split(",").map(s=>s.replace(/[^\w.\-\/ ]/g,"").trim()).filter(Boolean):[],
+    colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
+    desc:p.description||"",
+    chart:p.size_chart||""}));
+  status="ok";renderGrid();renderCart();
+}).catch(()=>{status="error";renderGrid();});
