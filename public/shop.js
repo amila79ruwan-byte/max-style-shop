@@ -66,7 +66,8 @@ function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=n
 function closeDetail(){
   if(history.state&&history.state.pm){history.back();}else{hideModal();}
 }
-window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();});
+// Back button: close the product popup first, then the cart/menu drawer, and only then leave the page.
+window.addEventListener("popstate",()=>{const m=$("#pmodal");if(m&&m.classList.contains("on"))hideModal();else hideDrawers();});
 
 // Swipeable photo strip if the product has extra photos, otherwise the main photo.
 function photosHtml(p){
@@ -100,7 +101,7 @@ function addFromDetail(){
   if(p.sizes.length&&!dSize){toast("Please select a size");return;}
   const k=p.id+"|"+dSize+"|"+dColor;
   cart[k]=(cart[k]||0)+dQty;
-  renderCart();closeDetail();openDr("cart");
+  renderCart();hideModal();openDr("cart");
 }
 
 function card(p){
@@ -132,8 +133,17 @@ function renderCart(){
   $("#total").textContent=fmt(total);$("#cnt").textContent=n;$("#cnt2").textContent=n;
   saveCart();
 }
-function openDr(id){closeDr();$("#"+id).classList.add("on");$("#ov").classList.add("on");}
-function closeDr(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
+// Side drawers (menu / cart) also use browser history, so the phone back button closes them.
+function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
+function openDr(id){
+  hideDrawers();
+  $("#"+id).classList.add("on");$("#ov").classList.add("on");
+  if(history.state&&history.state.pm)history.replaceState({dr:1},"");
+  else if(!(history.state&&history.state.dr))history.pushState({dr:1},"");
+}
+function closeDr(){
+  if(history.state&&history.state.dr){history.back();}else{hideDrawers();}
+}
 function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
 function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
 
