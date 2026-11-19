@@ -177,15 +177,17 @@ function calcTotals(){
   const cod=150;
   return {sub,disc,after,del,cod,total:after+del+cod};
 }
+// Shows the breakdown in the cart (#cartSum) and on the delivery details page (#sumBox).
 function updateSummary(){
-  const box=$("#sumBox"),t=calcTotals();
-  if(!box)return;
+  const t=calcTotals();
   const row=(l,v,extra)=>'<div style="display:flex;justify-content:space-between;margin:4px 0'+(extra||'')+'"><span>'+l+'</span><span>'+v+'</span></div>';
-  box.innerHTML=row("Items","Rs. "+fmt(t.sub))
+  const html=row("Items","Rs. "+fmt(t.sub))
     +(t.disc?row("First order discount (10%)","- Rs. "+fmt(t.disc),";color:#1a7f37"):"")
     +row("Delivery",t.del?"Rs. "+fmt(t.del):"Free")
     +row("Cash on delivery fee","Rs. "+fmt(t.cod))
     +'<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total</span><span>Rs. '+fmt(t.total)+'</span></div>';
+  const box=$("#sumBox");if(box)box.innerHTML=html;
+  const cs=$("#cartSum");if(cs)cs.innerHTML=html;
   const t2=$("#total2");if(t2)t2.textContent=fmt(t.total);
 }
 // Ask the server if this phone number is eligible for the first order discount (only true/false is returned).
