@@ -134,6 +134,8 @@ function infoHtml(html) { return '<div class="ac-card">' + html + '</div>'; }
 const TITLES = {home:"My Account",signin:"Sign in",signup:"Sign up",purchases:"My orders / Bills",settings:"Settings",about:"About Us",faq:"FAQs"};
 function render() {
   const m = ensure();
+  // Keep the browser history entry in sync with the page being shown.
+  if (history.state && history.state.ac) history.replaceState({ ac: 1, d: history.state.d || 0, v: view }, "");
   let body = "";
   if (view === "home") body = homeHtml();
   else if (view === "signin" || view === "signup") body = authHtml();
@@ -161,13 +163,21 @@ function ensure() {
   return m;
 }
 
+// Moving to a sub-page adds a history entry, so the phone back button returns to the previous page.
+function goView(next) {
+  view = next;
+  const d = (history.state && history.state.ac ? history.state.d || 0 : 0) + 1;
+  history.pushState({ ac: 1, d: d, v: next }, "");
+  return render();
+}
+
 async function act(a) {
   const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ""; };
   const err = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
-  if (a === "back") { if (view === "home") return closeAccount(); view = "home"; return render(); }
-  if (a === "goSignin" || a === "tabIn") { view = "signin"; return render(); }
-  if (a === "tabUp") { view = "signup"; return render(); }
-  if (a === "purchases" || a === "settings" || a === "about" || a === "faq") { view = a; return render(); }
+  if (a === "back") { if (view === "home") return closeAccount(); return history.back(); }
+  if (a === "goSignin" || a === "tabIn") return goView("signin");
+  if (a === "tabUp") return goView("signup");
+  if (a === "purchases" || a === "settings" || a === "about" || a === "faq") return goView(a);
   if (a === "lists") { closeAccount(); const w = document.getElementById("wishBtn"); if (w) w.click(); return; }
   if (a === "doLogin") {
     const r = await post({ action: "login", phone: v("aP"), pin: v("aPin") });
@@ -201,18 +211,23 @@ function openAccount() {
   view = "home";
   ensure();
   if (!(history.state && history.state.ac)) {
-    if (history.state && history.state.dr) history.replaceState({ ac: 1 }, "");
-    else history.pushState({ ac: 1 }, "");
+    if (history.state && history.state.dr) history.replaceState({ ac: 1, d: 0, v: "home" }, "");
+    else history.pushState({ ac: 1, d: 1, v: "home" }, "");
   }
   render();
   loadProfile().then(() => { fillCheckout(); if (document.getElementById("accModal")) render(); });
 }
+// Close the page and remove every history entry it added (sub-pages included).
 function closeAccount() {
   const m = document.getElementById("accModal"); if (m) m.remove();
-  if (history.state && history.state.ac) history.back();
+  const d = (history.state && history.state.ac) ? (history.state.d || 0) : 0;
+  if (d > 0) history.go(-d);
 }
 window.addEventListener("popstate", () => {
-  if (!(history.state && history.state.ac)) { const m = document.getElementById("accModal"); if (m) m.remove(); }
+  const m = document.getElementById("accModal");
+  if (!m) return;
+  if (history.state && history.state.ac) { view = history.state.v || "home"; render(); }
+  else m.remove();
 });
 
 const accBtn = document.getElementById("accBtn");
