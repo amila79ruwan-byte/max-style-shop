@@ -73,22 +73,36 @@
   <div id="items"></div>
   <div class="co">
     <div class="tot"><span>Total</span><span>Rs. <span id="total">0</span></span></div>
-    <input id="name" placeholder="Your name" autocomplete="name">
-    <input id="phone" placeholder="Phone number (WhatsApp)" inputmode="tel" autocomplete="tel">
-    <input id="phone2" placeholder="Alternate phone number (optional)" inputmode="tel" autocomplete="tel">
-    <select id="district" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px"><option value="">Select district</option><option>Colombo</option><option>Gampaha</option><option>Kalutara</option><option>Kandy</option><option>Matale</option><option>Nuwara Eliya</option><option>Galle</option><option>Matara</option><option>Hambantota</option><option>Jaffna</option><option>Kilinochchi</option><option>Mannar</option><option>Vavuniya</option><option>Mullaitivu</option><option>Batticaloa</option><option>Ampara</option><option>Trincomalee</option><option>Kurunegala</option><option>Puttalam</option><option>Anuradhapura</option><option>Polonnaruwa</option><option>Badulla</option><option>Monaragala</option><option>Ratnapura</option><option>Kegalle</option></select>
-    <textarea id="addr" rows="3" placeholder="Delivery address"></textarea>
     <div style="margin:6px 0 12px;font-size:15px">
       <b style="display:block;margin-bottom:6px">Payment method</b>
       <label style="display:block;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px"><input type="radio" name="pay" value="cod" checked> Cash on delivery</label>
       <label style="display:block;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;color:#999"><input type="radio" name="pay" value="card" disabled> Card <small>(Coming soon)</small></label>
       <label style="display:block;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;color:#999"><input type="radio" name="pay" value="bank" disabled> Online bank transfer <small>(Coming soon)</small></label>
     </div>
-    <button class="cta" id="order">Place order</button>
-    <div id="msg" role="status"></div>
+    <button class="cta" id="toCheckout">Next</button>
     <p style="margin-top:12px;text-align:center"><a href="track.html" style="text-decoration:underline">Track my order</a></p>
   </div>
 </aside>
+
+<!-- Delivery details page (opens after Next in the cart) -->
+<div id="checkout" style="display:none;position:fixed;inset:0;background:#fff;z-index:88;overflow-y:auto;padding:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <button class="sec" id="coBack" style="width:auto;padding:10px 14px">← Back</button>
+    <b style="font-size:18px">Delivery details</b>
+    <span style="width:60px"></span>
+  </div>
+  <div class="co">
+    <input id="name" placeholder="Your name" autocomplete="name">
+    <input id="phone" placeholder="Phone number (WhatsApp)" inputmode="tel" autocomplete="tel">
+    <input id="phone2" placeholder="Alternate phone number (optional)" inputmode="tel" autocomplete="tel">
+    <select id="district" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px"><option value="">Select district</option><option>Colombo</option><option>Gampaha</option><option>Kalutara</option><option>Kandy</option><option>Matale</option><option>Nuwara Eliya</option><option>Galle</option><option>Matara</option><option>Hambantota</option><option>Jaffna</option><option>Kilinochchi</option><option>Mannar</option><option>Vavuniya</option><option>Mullaitivu</option><option>Batticaloa</option><option>Ampara</option><option>Trincomalee</option><option>Kurunegala</option><option>Puttalam</option><option>Anuradhapura</option><option>Polonnaruwa</option><option>Badulla</option><option>Monaragala</option><option>Ratnapura</option><option>Kegalle</option></select>
+    <textarea id="addr" rows="3" placeholder="Delivery address"></textarea>
+    <div class="tot" style="margin-top:6px"><span>Total (Cash on delivery)</span><span>Rs. <span id="total2">0</span></span></div>
+    <div id="sumBox" style="margin:10px 0;font-size:15px"></div>
+    <button class="cta" id="order">Place order</button>
+    <div id="msg" role="status"></div>
+  </div>
+</div>
 
 <script src="install.js"></script>
 <script src="lang.js"></script>
