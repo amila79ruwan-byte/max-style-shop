@@ -80,6 +80,8 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
     <input id="price" type="number" inputmode="numeric" placeholder="Price (Rs.)">
     <select id="cat"><option value="women">Women</option><option value="men">Men</option><option value="kids">Kids</option></select>
     <input id="stock" type="number" inputmode="numeric" min="0" placeholder="Stock (how many available). Leave empty = not tracked">
+    <select id="feat"></select>
+    <div class="hint">Slider position 1-15 = shown in the moving strip on the home page, in that order. If another product already has the same number, it is removed from the slider. If no product has a number, the first 15 products are shown.</div>
     <input id="sizes" placeholder="Sizes, comma separated (e.g. S,M,L,XL). Leave empty for no sizes">
     <input id="colors" placeholder="Colors, comma separated. Add #hex for exact color, e.g. Black,Navy:#1f2a44,Beige:#d8c3a5. Leave empty for none">
     <textarea id="desc" placeholder="Description (fabric, care, details)"></textarea>
@@ -173,6 +175,8 @@ let pw=sessionStorage.getItem("pw")||"", image="", editId=null, items=[];
 const hdr=()=>({"content-type":"application/json","x-admin-password":pw});
 const DISTRICTS=["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle","Matara","Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu","Batticaloa","Ampara","Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa","Badulla","Monaragala","Ratnapura","Kegalle"];
 $("#oe_dist").innerHTML=DISTRICTS.map(d=>`<option>${d}</option>`).join("");
+// Slider position selector (1-15). Empty = not shown in the slider.
+$("#feat").innerHTML='<option value="">Slider position: not shown</option>'+Array.from({length:15},(_,i)=>`<option value="${i+1}">Slider position ${i+1}</option>`).join("");
 
 // Automatic product code: made from the product id (id 7 -> MS-P0007).
 const pcode=id=>"MS-P"+String(id).padStart(4,"0");
@@ -224,14 +228,14 @@ function renderList(){
   $("#pcnt").textContent=term?(list.length+" of "+items.length+" products"):(items.length+" products");
   $("#list").innerHTML=list.length?list.map(p=>`<div class="item">
     ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
-    <div><span class="pcode">${pcode(p.id)}</span><br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${esc(p.cat)}<br>${stockHtml(p.stock)}</div>
+    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")} · ${esc(p.cat)}<br>${stockHtml(p.stock)}</div>
     <button class="edt" onclick="edit(${p.id})">Edit</button>
     <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products yet.")+"</p>";
 }
 $("#psearch").addEventListener("input",renderList);
 function reset(){
   editId=null;image="";
-  ["#name","#price","#stock","#sizes","#colors","#desc","#chart","#file"].forEach(s=>$(s).value="");
+  ["#name","#price","#stock","#feat","#sizes","#colors","#desc","#chart","#file"].forEach(s=>$(s).value="");
   $("#prev").style.display="none";$("#ftitle").textContent="Add product";$("#cancel").style.display="none";
   loadPhotos();
 }
@@ -239,6 +243,7 @@ function edit(id){
   const p=items.find(x=>x.id==id);editId=id;image="";
   $("#name").value=p.name;$("#price").value=p.price;$("#cat").value=p.cat;
   $("#stock").value=(p.stock===null||p.stock===undefined)?"":p.stock;
+  $("#feat").value=p.feat_order>0?String(p.feat_order):"";
   $("#sizes").value=p.sizes||"";$("#colors").value=p.colors||"";
   $("#desc").value=p.description||"";$("#chart").value=p.size_chart||"";
   $("#ftitle").textContent="Edit product "+pcode(id)+" (leave photo empty to keep it)";$("#cancel").style.display="block";
@@ -506,6 +511,7 @@ $("#file").onchange=async e=>{
 };
 $("#save").onclick=async()=>{
   const body={id:editId,name:$("#name").value,price:$("#price").value,cat:$("#cat").value,stock:$("#stock").value,
+    feat_order:$("#feat").value,
     sizes:$("#sizes").value,colors:$("#colors").value,description:$("#desc").value,size_chart:$("#chart").value};
   if(image)body.image=image;
   $("#msg").textContent="Saving…";
