@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Customer PIN reset</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#111;padding:16px;max-width:460px;margin:auto}
+h1{font-size:20px;margin-bottom:12px}
+.box{background:#fff;border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:13px;color:#555;margin:8px 0 4px}
+input,button{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font:inherit;font-size:16px;margin-bottom:6px}
+button{background:#111;color:#f3d27a;border:0;font-weight:700;cursor:pointer;margin-top:8px}
+.msg{font-size:14px;min-height:20px;margin-top:6px}
+.ok{color:#1a7f37}.err{color:#c62828}
+.hint{font-size:12px;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Customer PIN reset</h1>
+
+<div class="box" id="login">
+  <label>Admin password</label>
+  <input id="pw" type="password">
+  <button id="go">Continue</button>
+  <div class="msg err" id="lmsg"></div>
+</div>
+
+<div class="box" id="panel" style="display:none">
+  <label>Customer phone number</label>
+  <input id="phone" inputmode="tel" placeholder="07XXXXXXXX">
+  <label>New 4-digit PIN</label>
+  <input id="pin" type="text" inputmode="numeric" maxlength="4" placeholder="e.g. 4821">
+  <div class="hint">Tell the customer the new PIN on WhatsApp. They can change it later in Settings.</div>
+  <button id="reset">Reset PIN</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let pw = sessionStorage.getItem("pw") || "";
+function show() { $("#login").style.display = "none"; $("#panel").style.display = "block"; }
+async function check() {
+  // Check the password with a request that does nothing except verify it.
+  const r = await fetch("/api/account", { method: "POST", headers: { "content-type": "application/json", "x-admin-password": pw }, body: JSON.stringify({ action: "adminReset", phone: "", new_pin: "" }) });
+  return r.status !== 401;
+}
+$("#go").onclick = async () => {
+  pw = $("#pw").value;
+  if (await check()) { sessionStorage.setItem("pw", pw); show(); }
+  else $("#lmsg").textContent = "Wrong password.";
+};
+$("#reset").onclick = async () => {
+  const msg = $("#msg");
+  msg.className = "msg";
+  const r = await fetch("/api/account", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-admin-password": pw },
+    body: JSON.stringify({ action: "adminReset", phone: $("#phone").value, new_pin: $("#pin").value.trim() })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.ok) { msg.className = "msg ok"; msg.textContent = "PIN reset. Customer must sign in again with the new PIN."; $("#phone").value = ""; $("#pin").value = ""; }
+  else { msg.className = "msg err"; msg.textContent = d.error || "Could not reset the PIN"; if (r.status === 401) sessionStorage.removeItem("pw"); }
+};
+if (pw) check().then(ok => { if (ok) show(); else sessionStorage.removeItem("pw"); });
+</script>
+</body>
+</html>
