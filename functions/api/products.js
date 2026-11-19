@@ -4,7 +4,7 @@ const normList = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(s 
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(
-    "SELECT id,name,price,cat,sizes,colors,description,size_chart,(image IS NOT NULL AND image<>'') AS has_image,updated FROM products ORDER BY id DESC"
+    "SELECT id,name,price,cat,sizes,colors,description,size_chart,stock,(image IS NOT NULL AND image<>'') AS has_image,updated FROM products ORDER BY id DESC"
   ).all();
   return J(results);
 }
@@ -19,13 +19,15 @@ export async function onRequestPost({ request, env }) {
   const sizes = normList(b.sizes), colors = normList(b.colors);
   const description = String(b.description || "").trim().slice(0, 2000);
   const sizeChart = String(b.size_chart || "").trim().slice(0, 2000);
+  // Stock: empty = not tracked (NULL), a number = how many are left.
+  const stock = (b.stock === "" || b.stock === null || b.stock === undefined) ? null : Math.max(0, parseInt(b.stock, 10) || 0);
   let id = b.id;
   if (id) {
-    await env.DB.prepare("UPDATE products SET name=?,price=?,cat=?,sizes=?,colors=?,description=?,size_chart=?,updated=? WHERE id=?")
-      .bind(name, price, cat, sizes, colors, description, sizeChart, now, id).run();
+    await env.DB.prepare("UPDATE products SET name=?,price=?,cat=?,sizes=?,colors=?,description=?,size_chart=?,stock=?,updated=? WHERE id=?")
+      .bind(name, price, cat, sizes, colors, description, sizeChart, stock, now, id).run();
   } else {
-    const r = await env.DB.prepare("INSERT INTO products (name,price,cat,sizes,colors,description,size_chart,updated) VALUES (?,?,?,?,?,?,?,?)")
-      .bind(name, price, cat, sizes, colors, description, sizeChart, now).run();
+    const r = await env.DB.prepare("INSERT INTO products (name,price,cat,sizes,colors,description,size_chart,stock,updated) VALUES (?,?,?,?,?,?,?,?,?)")
+      .bind(name, price, cat, sizes, colors, description, sizeChart, stock, now).run();
     id = r.meta.last_row_id;
   }
   if (b.image) await env.DB.prepare("UPDATE products SET image=? WHERE id=?").bind(b.image, id).run();
