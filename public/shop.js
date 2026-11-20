@@ -39,16 +39,21 @@ window.addEventListener("popstate",()=>{
     if(sub && sub.classList.contains("open")){
         sub.classList.remove("open");
         $("#clothGrp").setAttribute("aria-expanded","false");
-        return; // මෙතනින් නවතිනවා, මෙනුව වැහෙන්න දෙන්නේ නෑ
+        return; 
     }
   }
 
   if(v==="cart"||v==="menu"){
     if(v==="cart"&&!keys().length){history.back();return;}
     showDr(v);
-  }else hideDrawers();
+  }else if(v==="shop"){
+    hideDrawers();
+  }else {
+    hideDrawers();
+  }
 });
 
+// Product detail popup (created once).
 function ensureModal(){
   if($("#pmodal"))return;
   const css=document.createElement("style");
@@ -80,6 +85,7 @@ function openDetail(id){
   detail=p;dSize="";dColor="";dQty=1;dChart=false;
   if(p.sizes.length===1)dSize=p.sizes[0];
   if(p.colorList.length===1)dColor=p.colorList[0].name;
+  // Load the product's extra photos (once), then show them in the popup.
   if(!p.photos){
     p.photos=[];
     fetch("/api/photos?product="+p.id).then(r=>r.json()).then(l=>{p.photos=l;if(detail===p)renderDetail();}).catch(()=>{});
@@ -157,6 +163,7 @@ function renderCart(){
   $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;
   saveCart();
 }
+// Side drawers (menu / cart). Each one adds a history step, so the phone back button closes it.
 function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
 function showDr(id){
   hideDrawers();
@@ -174,8 +181,23 @@ function closeDr(){
   const cur=curV();
   if(cur==="cart"||cur==="menu"){history.back();}else{hideDrawers();}
 }
-function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
-function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
+
+// --- මෙතන තමයි වෙනස් වෙලා තියෙන්නේ (Back button එක හරියට වැඩ කරන්න) ---
+function go(id){
+  hideDrawers();
+  const shop = document.getElementById(id);
+  if(shop) shop.scrollIntoView({behavior:"smooth"});
+}
+
+function setCat(c){
+  cat=c;
+  onlyWish=false;
+  renderGrid();
+  go("shop");
+  if(curV()!=="shop") {
+    history.pushState({v:"shop"},"");
+  }
+}
 
 $("#menuBtn").onclick=()=>openDr("menu");
 $("#cartBtn").onclick=()=>openDr("cart");
@@ -388,7 +410,7 @@ moBtn.onclick=()=>openMyOrders();
 $("#menu").appendChild(moBtn);
 
 
-// ---- Category circles ----
+// ---- Category circles: a product photo of that category inside each circle ----
 function renderCircs(){
   $$(".circs button").forEach(b=>{
     const c=b.dataset.circ||b.dataset.cat;
