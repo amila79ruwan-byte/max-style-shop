@@ -1,9 +1,11 @@
-// Customer accounts: sign up / sign in with phone + 4-digit PIN, profile, and order history.
+// Customer accounts: sign up / sign in with phone + 4-digit PIN, profile, saved addresses, and order history.
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const enc = new TextEncoder();
 const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
 const normPhone = p => String(p || "").replace(/\D/g, "");
 const newToken = () => hex(crypto.getRandomValues(new Uint8Array(24)));
+const DISTRICTS = ["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle","Matara","Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu","Batticaloa","Ampara","Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa","Badulla","Monaragala","Ratnapura","Kegalle"];
+const MAX_ADDR = 10;
 async function hashPin(phone, pin) {
   return hex(await crypto.subtle.digest("SHA-256", enc.encode("maxstyle:" + phone + ":" + pin)));
 }
@@ -12,10 +14,26 @@ async function me(env, tok) {
   return await env.DB.prepare("SELECT id,phone,name,phone2,district,address FROM customers WHERE token=?").bind(tok).first();
 }
 
+// Saved addresses of one customer (default first).
+async function addressesOf(env, cid) {
+  const { results } = await env.DB.prepare(
+    "SELECT id,name,phone,phone2,district,city,postal,address,is_default FROM addresses WHERE customer_id=? ORDER BY is_default DESC, id DESC"
+  ).bind(cid).all();
+  return results;
+}
+
 // Order history: the customer's orders are matched by the last 9 digits of the phone number.
 export async function onRequestGet({ request, env }) {
   const p = await me(env, new URL(request.url).searchParams.get("token") || "");
   if (!p) return J({ error: "Please sign in" }, 401);
+  let addrs = await addressesOf(env, p.id);
+  // First time: turn the old single address (if any) into the first saved address, as the default.
+  if (!addrs.length && p.address && p.district) {
+    await env.DB.prepare(
+      "INSERT INTO addresses (customer_id,name,phone,phone2,district,city,postal,address,is_default,created) VALUES (?,?,?,?,?,?,?,?,1,?)"
+    ).bind(p.id, p.name, p.phone, p.phone2 || "", p.district, "", "", p.address, Date.now()).run();
+    addrs = await addressesOf(env, p.id);
+  }
   const { results } = await env.DB.prepare(
     "SELECT id,name,phone1,phone2,district,address,items,total,status,created FROM orders WHERE phone1 LIKE ? ORDER BY id DESC LIMIT 50"
   ).bind("%" + p.phone.slice(-9)).all();
@@ -24,7 +42,7 @@ export async function onRequestGet({ request, env }) {
     try { items = JSON.parse(o.items || "[]"); } catch (e) {}
     return { ...o, code: "MS-" + (1000 + o.id), items };
   });
-  return J({ profile: p, orders });
+  return J({ profile: p, orders, addresses: addrs });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -88,12 +106,86 @@ export async function onRequestPost({ request, env }) {
     return J({ ok: true });
   }
 
+  // Saved addresses: add a new one, or edit one (when b.id is given).
+  if (act === "addrSave") {
+    const name = String(b.name || "").trim().slice(0, 100);
+    const phone = normPhone(b.phone), phone2 = normPhone(b.phone2);
+    const district = String(b.district || "").trim();
+    const city = String(b.city || "").trim().slice(0, 80);
+    const postal = String(b.postal || "").trim().slice(0, 10);
+    const address = String(b.address || "").trim().slice(0, 500);
+    if (!name) return J({ error: "Enter the name" }, 400);
+    if (phone.length < 9) return J({ error: "Enter a valid phone number" }, 400);
+    if (phone2 && phone2.length < 9) return J({ error: "Enter a valid second phone number" }, 400);
+    if (!DISTRICTS.includes(district)) return J({ error: "Select a district" }, 400);
+    if (!city) return J({ error: "Select a city" }, 400);
+    if (!address) return J({ error: "Enter the address" }, 400);
+
+    const id = Number(b.id) || 0;
+    if (id) {
+      const own = await env.DB.prepare("SELECT id FROM addresses WHERE id=? AND customer_id=?").bind(id, p.id).first();
+      if (!own) return J({ error: "Address not found" }, 404);
+      await env.DB.prepare("UPDATE addresses SET name=?,phone=?,phone2=?,district=?,city=?,postal=?,address=? WHERE id=?")
+        .bind(name, phone, phone2, district, city, postal, address, id).run();
+      if (b.makeDefault) {
+        await env.DB.prepare("UPDATE addresses SET is_default=CASE WHEN id=? THEN 1 ELSE 0 END WHERE customer_id=?").bind(id, p.id).run();
+      }
+      return J({ ok: true, id });
+    }
+
+    const cnt = await env.DB.prepare("SELECT COUNT(*) AS n FROM addresses WHERE customer_id=?").bind(p.id).first();
+    if (cnt && cnt.n >= MAX_ADDR) return J({ error: "You can save up to " + MAX_ADDR + " addresses" }, 400);
+    const first = !cnt || cnt.n === 0;
+    const r = await env.DB.prepare(
+      "INSERT INTO addresses (customer_id,name,phone,phone2,district,city,postal,address,is_default,created) VALUES (?,?,?,?,?,?,?,?,?,?)"
+    ).bind(p.id, name, phone, phone2, district, city, postal, address, first ? 1 : 0, Date.now()).run();
+    const newId = r.meta.last_row_id;
+    if (!first && b.makeDefault) {
+      await env.DB.prepare("UPDATE addresses SET is_default=CASE WHEN id=? THEN 1 ELSE 0 END WHERE customer_id=?").bind(newId, p.id).run();
+    }
+    return J({ ok: true, id: newId });
+  }
+
+  // Make one saved address the default (it fills the checkout form).
+  if (act === "addrDefault") {
+    const id = Number(b.id) || 0;
+    const own = await env.DB.prepare("SELECT id FROM addresses WHERE id=? AND customer_id=?").bind(id, p.id).first();
+    if (!own) return J({ error: "Address not found" }, 404);
+    await env.DB.prepare("UPDATE addresses SET is_default=CASE WHEN id=? THEN 1 ELSE 0 END WHERE customer_id=?").bind(id, p.id).run();
+    return J({ ok: true });
+  }
+
+  // Delete one saved address. If it was the default, the newest remaining address becomes the default.
+  if (act === "addrDelete") {
+    const id = Number(b.id) || 0;
+    const own = await env.DB.prepare("SELECT id,is_default FROM addresses WHERE id=? AND customer_id=?").bind(id, p.id).first();
+    if (!own) return J({ error: "Address not found" }, 404);
+    await env.DB.prepare("DELETE FROM addresses WHERE id=?").bind(id).run();
+    if (own.is_default) {
+      const next = await env.DB.prepare("SELECT id FROM addresses WHERE customer_id=? ORDER BY id DESC LIMIT 1").bind(p.id).first();
+      if (next) await env.DB.prepare("UPDATE addresses SET is_default=1 WHERE id=?").bind(next.id).run();
+    }
+    return J({ ok: true });
+  }
+
   if (act === "pin") {
     const row = await env.DB.prepare("SELECT pin_hash FROM customers WHERE id=?").bind(p.id).first();
     if (!row || row.pin_hash !== await hashPin(p.phone, String(b.old_pin || ""))) return J({ error: "Current PIN is wrong" }, 401);
     const np = String(b.new_pin || "");
     if (!/^\d{4}$/.test(np)) return J({ error: "New PIN must be 4 digits" }, 400);
     await env.DB.prepare("UPDATE customers SET pin_hash=? WHERE id=?").bind(await hashPin(p.phone, np), p.id).run();
+    return J({ ok: true });
+  }
+
+  // Delete the account (needs the PIN). Saved addresses are deleted too. Orders are kept, so a new account
+  // made later does not get the first order discount again.
+  if (act === "deleteAccount") {
+    const row = await env.DB.prepare("SELECT pin_hash FROM customers WHERE id=?").bind(p.id).first();
+    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.pin || ""))) return J({ error: "PIN is wrong" }, 401);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM addresses WHERE customer_id=?").bind(p.id),
+      env.DB.prepare("DELETE FROM customers WHERE id=?").bind(p.id)
+    ]);
     return J({ ok: true });
   }
 
