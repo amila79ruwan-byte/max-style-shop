@@ -192,7 +192,7 @@ $("#oe_dist").innerHTML=DISTRICTS.map(d=>`<option>${d}</option>`).join("");
 $("#feat").innerHTML='<option value="">Slider position: not shown</option>'+Array.from({length:15},(_,i)=>`<option value="${i+1}">Slider position ${i+1}</option>`).join("");
 
 // Product categories (value used by the shop, label shown here)
-const CATS=[["women","Women"],["men","Men"],["kids","Kids"],["phone","Phone Accessories"],["toys","Toys"],["electric","Electrical Items"],["umbrella","Umbrellas"],["bags","Bags"],["school","School Items & Books"]];
+const CATS=[["women","Women"],["men","Men"],["kids","Kids"],["bedsheets","Bed Sheets"],["towels","Towels"],["pillows","Pillows"],["phone","Phone Accessories"],["toys","Toys"],["electric","Electrical Items"],["umbrella","Umbrellas"],["bags","Bags"],["school","School Items & Books"]];
 const catName=c=>(CATS.find(x=>x[0]===c)||[c,c])[1];
 $("#cat").innerHTML=CATS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
 
