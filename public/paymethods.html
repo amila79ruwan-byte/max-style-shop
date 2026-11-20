@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Payment methods</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#111;padding:16px;max-width:520px;margin:auto}
+h1{font-size:20px;margin-bottom:12px}
+.box{background:#fff;border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:13px;color:#555;margin:8px 0 4px}
+input,select,textarea,button{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font:inherit;font-size:16px;margin-bottom:6px;background:#fff}
+textarea{min-height:110px;resize:vertical}
+input[type=checkbox]{width:auto;margin:0 6px 0 0}
+button{background:#111;color:#f3d27a;border:0;font-weight:700;cursor:pointer;margin-top:6px}
+button.del{background:#c62828;color:#fff;width:auto;display:inline-block;padding:10px 14px;margin-left:6px}
+button.save{width:auto;display:inline-block;padding:10px 14px}
+.msg{font-size:14px;min-height:20px;margin-top:6px}
+.ok{color:#1a7f37}.err{color:#c62828}
+.hint{font-size:12px;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Payment methods</h1>
+
+<div class="box" id="login">
+  <label>Admin password</label>
+  <input id="pw" type="password">
+  <button id="go">Continue</button>
+  <div class="msg err" id="lmsg"></div>
+</div>
+
+<div id="panel" style="display:none">
+  <div class="box">
+    <b>Add payment method</b> <span class="hint" id="count"></span>
+    <label>Type</label>
+    <select id="ntype">
+      <option value="bank">Bank Deposit</option>
+      <option value="online">Online Transfer</option>
+    </select>
+    <label>Title (customers see this)</label>
+    <input id="ntitle" maxlength="60" placeholder="e.g. Commercial Bank - Savings">
+    <label>Details (account name, number, branch...)</label>
+    <textarea id="ndet" maxlength="600" placeholder="Account name: ...&#10;Account no: ...&#10;Branch: ..."></textarea>
+    <label>Order (0 = first)</label>
+    <input id="nsort" type="number" value="0">
+    <label><input id="nactive" type="checkbox" checked> Show to customers</label>
+    <button id="add">Add</button>
+    <div class="msg" id="amsg"></div>
+  </div>
+  <div id="list"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let pw = sessionStorage.getItem("pw") || "";
+const hdr = () => ({ "content-type": "application/json", "x-admin-password": pw });
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TY = { bank: "Bank Deposit", online: "Online Transfer" };
+const opts = t => Object.keys(TY).map(k => `<option value="${k}" ${k === t ? "selected" : ""}>${TY[k]}</option>`).join("");
+
+// Empty request: 400 when the password is right, 401 when it is wrong.
+async function check() {
+  const r = await fetch("/api/paymethods", { method: "POST", headers: hdr(), body: "{}" });
+  return r.status !== 401;
+}
+function show() { $("#login").style.display = "none"; $("#panel").style.display = "block"; load(); }
+
+async function load() {
+  const r = await fetch("/api/paymethods", { headers: hdr() });
+  const list = r.ok ? await r.json() : [];
+  $("#count").textContent = list.length + " / 10";
+  $("#list").innerHTML = list.map(m => `<div class="box" data-id="${m.id}">
+      <label>Type</label><select class="ty">${opts(m.type)}</select>
+      <label>Title</label><input class="t" value="${esc(m.title)}" maxlength="60">
+      <label>Details</label><textarea class="d" maxlength="600">${esc(m.details)}</textarea>
+      <label>Order</label><input class="s" type="number" value="${esc(m.sort)}">
+      <label><input class="a" type="checkbox" ${m.active ? "checked" : ""}> Show to customers</label>
+      <button class="save" data-save="${m.id}">Save</button><button class="del" data-del="${m.id}">Delete</button>
+      <div class="msg" data-m="${m.id}"></div>
+    </div>`).join("") || '<p class="hint">No payment methods yet.</p>';
+}
+
+async function saveRow(id) {
+  const box = document.querySelector(`[data-id="${id}"]`);
+  const msg = box.querySelector(`[data-m="${id}"]`);
+  const r = await fetch("/api/paymethods", {
+    method: "POST", headers: hdr(),
+    body: JSON.stringify({ id: Number(id), type: box.querySelector(".ty").value, title: box.querySelector(".t").value,
+      details: box.querySelector(".d").value, sort: box.querySelector(".s").value, active: box.querySelector(".a").checked })
+  });
+  const d = await r.json().catch(() => ({}));
+  msg.className = "msg " + (r.ok ? "ok" : "err");
+  msg.textContent = r.ok ? "Saved ✓" : (d.error || "Could not save");
+}
+
+async function delRow(id) {
+  if (!confirm("Delete this payment method?")) return;
+  await fetch("/api/paymethods?id=" + id, { method: "DELETE", headers: hdr() });
+  load();
+}
+
+$("#list").addEventListener("click", e => {
+  if (e.target.dataset.save) saveRow(e.target.dataset.save);
+  if (e.target.dataset.del) delRow(e.target.dataset.del);
+});
+
+$("#add").onclick = async () => {
+  const msg = $("#amsg");
+  msg.className = "msg"; msg.textContent = "Adding…";
+  const r = await fetch("/api/paymethods", {
+    method: "POST", headers: hdr(),
+    body: JSON.stringify({ type: $("#ntype").value, title: $("#ntitle").value, details: $("#ndet").value,
+      sort: $("#nsort").value, active: $("#nactive").checked })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { msg.className = "msg err"; msg.textContent = d.error || "Could not add"; return; }
+  $("#ntitle").value = ""; $("#ndet").value = ""; $("#nsort").value = "0";
+  msg.className = "msg ok"; msg.textContent = "Added ✓";
+  load();
+};
+
+$("#go").onclick = async () => {
+  pw = $("#pw").value;
+  if (await check()) { sessionStorage.setItem("pw", pw); show(); }
+  else $("#lmsg").textContent = "Wrong password.";
+};
+if (pw) check().then(ok => { if (ok) show(); else sessionStorage.removeItem("pw"); });
+</script>
+</body>
+</html>
