@@ -3,25 +3,17 @@ const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const fmt=n=>Number(n).toLocaleString("en-US");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const listOf=v=>String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
-// Automatic product code: made from the product id (id 7 -> MS-P0007).
 const pcode=id=>"MS-P"+String(id).padStart(4,"0");
-// The "Dresses" circle opens this list (value = category used by the admin, label = shown name).
 const DRESS_CATS=[["women","Women"],["men","Men"],["kids","Kids"],["bedsheets","Bed Sheets"],["towels","Towels"],["pillows","Pillows"]];
-// Signed-in customer token (saved by account.js). The server uses it for the first order discount.
 const getTok=()=>{try{return localStorage.getItem("maxstyle_token")||"";}catch(e){return "";}};
 let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(loadWish()),cat="all",term="",onlyWish=false;
 let detail=null,dSize="",dColor="",dQty=1,dChart=false;
 $("#wa").href="https://wa.me/"+WHATSAPP;
 
-// Keep the cart in the browser so it survives a page refresh.
 function loadCart(){try{return JSON.parse(localStorage.getItem("maxstyle_cart")||"{}")||{};}catch(e){return {};}}
 function saveCart(){try{localStorage.setItem("maxstyle_cart",JSON.stringify(cart));}catch(e){}}
-
-// Keep the wishlist in the browser so it survives a page refresh.
 function loadWish(){try{return JSON.parse(localStorage.getItem("maxstyle_wish")||"[]")||[];}catch(e){return [];}}
 function saveWish(){try{localStorage.setItem("maxstyle_wish",JSON.stringify([...wish]));}catch(e){}}
-
-// Cart keys look like "productId|size|color".
 function parseKey(k){const [id,size="",color=""]=k.split("|");return {id,size,color};}
 function prodOf(k){return PRODUCTS.find(x=>x.id==parseKey(k).id);}
 
@@ -31,23 +23,32 @@ function toast(t){
 }
 
 // ---- Page history (phone back button) ----
-// Every page/popup that opens adds one history step: {v:"pm"|"cart"|"menu"|"co"|"ok"|"mo"}.
-// Back always returns to the page that was open before it.
 function curV(){return (history.state&&history.state.v)||"";}
 if(curV())history.replaceState(null,"");
+
 window.addEventListener("popstate",()=>{
   const v=curV();
   if(v!=="ok"){const o=$("#okModal");if(o)o.remove();}
   if(v!=="co")hideCheckout();
   if(v!=="mo")removeMyOrders();
   if(v!=="pm")hideModal();
+  
+  // සයිඩ් මෙනුවේ Dresses එක expand වෙලා තියෙනවා නම් ඒක වහන්න
+  if(v==="menu"){
+    const sub=$("#clothSub");
+    if(sub && sub.classList.contains("open")){
+        sub.classList.remove("open");
+        $("#clothGrp").setAttribute("aria-expanded","false");
+        return; // මෙතනින් නවතිනවා, මෙනුව වැහෙන්න දෙන්නේ නෑ
+    }
+  }
+
   if(v==="cart"||v==="menu"){
     if(v==="cart"&&!keys().length){history.back();return;}
     showDr(v);
   }else hideDrawers();
 });
 
-// Product detail popup (created once).
 function ensureModal(){
   if($("#pmodal"))return;
   const css=document.createElement("style");
@@ -79,7 +80,6 @@ function openDetail(id){
   detail=p;dSize="";dColor="";dQty=1;dChart=false;
   if(p.sizes.length===1)dSize=p.sizes[0];
   if(p.colorList.length===1)dColor=p.colorList[0].name;
-  // Load the product's extra photos (once), then show them in the popup.
   if(!p.photos){
     p.photos=[];
     fetch("/api/photos?product="+p.id).then(r=>r.json()).then(l=>{p.photos=l;if(detail===p)renderDetail();}).catch(()=>{});
@@ -89,12 +89,9 @@ function openDetail(id){
   $("#pmodal").classList.add("on");
 }
 function hideModal(){const m=$("#pmodal");if(m)m.classList.remove("on");detail=null;}
-// Closing the popup: the back button closes the popup first, not the whole page.
 function closeDetail(){
   if(curV()==="pm"){history.back();}else{hideModal();}
 }
-
-// Swipeable photo strip if the product has extra photos, otherwise the main photo.
 function photosHtml(p){
   if(p.photos&&p.photos.length)return '<div class="gal">'+p.photos.map(x=>'<img src="'+x.url+'" alt="">').join("")+'</div>';
   return '<div class="pm-img">'+(p.image?'<img src="'+p.image+'" alt="">':esc(p.name.charAt(0)))+'</div>';
@@ -160,7 +157,6 @@ function renderCart(){
   $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;
   saveCart();
 }
-// Side drawers (menu / cart). Each one adds a history step, so the phone back button closes it.
 function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
 function showDr(id){
   hideDrawers();
@@ -192,7 +188,6 @@ $("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();}
 $("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
 
 // ---- Round category buttons on the home page ----
-// "Dresses" opens a small list (Women, Men, Kids, Bed Sheets, Towels, Pillows). The others go straight to their products.
 function openDressSheet(){
   let s=$("#dressSheet");
   if(!s){
@@ -216,13 +211,10 @@ $$("[data-circ]").forEach(e=>e.addEventListener("click",()=>{
   if(c==="dresses")openDressSheet();else setCat(c);
 }));
 
-// ---- Totals: first order discount, delivery and cash on delivery fee ----
-// The browser shows this breakdown; the server calculates the final total again when the order is placed.
-// First order discount: only for a signed-in customer who has no earlier (not cancelled) order. The server decides.
+// ---- Totals ----
 let firstFlag=null,firstFor="";
 function calcTotals(){
   const sub=keys().reduce((s,k)=>{const p=prodOf(k);return s+(p?p.price*cart[k]:0);},0);
-  // Empty cart: everything is 0.
   if(!sub)return {sub:0,disc:0,after:0,del:0,cod:0,total:0};
   const disc=(getTok()&&firstFlag===true)?Math.round(sub*0.10):0;
   const after=sub-disc;
@@ -230,7 +222,6 @@ function calcTotals(){
   const cod=150;
   return {sub,disc,after,del,cod,total:after+del+cod};
 }
-// Shows the breakdown in the cart (#cartSum) and on the delivery details page (#sumBox).
 function updateSummary(){
   const t=calcTotals();
   const row=(l,v,extra)=>'<div style="display:flex;justify-content:space-between;margin:4px 0'+(extra||'')+'"><span>'+l+'</span><span>'+v+'</span></div>';
@@ -242,11 +233,9 @@ function updateSummary(){
   const box=$("#sumBox");if(box)box.innerHTML=html;
   const cs=$("#cartSum");if(cs)cs.innerHTML=html;
   const t2=$("#total2");if(t2)t2.textContent=fmt(t.total);
-  // Small note about the 10% discount (elements with class "firstNote", if the page has them).
   const note=!getTok()?"Sign in to get 10% off your first order":(firstFlag===true?"10% first order discount applied ✓":"");
   $$(".firstNote").forEach(n=>{n.textContent=note;n.style.display=note?"block":"none";n.style.color=getTok()?"#1a7f37":"#8a6a1f";});
 }
-// Ask the server if this signed-in customer can get the first order discount (only true/false is returned).
 function checkFirst(){
   const tok=getTok();
   if(!tok){firstFlag=false;firstFor="";updateSummary();return;}
@@ -260,7 +249,6 @@ function checkFirst(){
 }
 $("#phone").addEventListener("input",checkFirst);
 
-// Cart -> Next opens the delivery details page. The phone back button returns to the cart.
 function checkoutShown(){const c=$("#checkout");return !!c&&c.style.display==="block";}
 function openCheckout(){
   if(!keys().length){toast("Add at least one item first");return;}
@@ -298,12 +286,11 @@ $("#order").onclick=async()=>{
   cart={};saveCart();renderCart();
   ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
   $("#district").value="";
-  firstFlag=null;firstFor="";   // the next order must be checked again
+  firstFlag=null;firstFor="";
   m.textContent="";
   showOrderDone(bill,text);
 };
 
-// Order success page: shows the order code, delivery date, bill and a way back to the main page.
 function showOrderDone(b,text){
   hideDrawers();
   hideCheckout();
@@ -324,7 +311,7 @@ function showOrderDone(b,text){
     +'<button onclick="closeOrderDone()" style="padding:13px;border:0;background:#eee;color:#111;border-radius:8px;font-weight:700;font-size:16px">Back to main page</button>'
     +'</div>';
   const cur=curV();
-  if(cur==="ok"){/* already on the success page */}
+  if(cur==="ok"){}
   else if(cur==="co")history.replaceState({v:"ok"},"");
   else history.pushState({v:"ok"},"");
   window.scrollTo(0,0);
@@ -340,13 +327,11 @@ function viewBillByCode(code){
   window.open(url,"_blank");
 }
 
-// ---- Bills and "My orders" (kept on this phone) ----
 function loadMyOrders(){try{return JSON.parse(localStorage.getItem("maxstyle_orders")||"[]")||[];}catch(e){return [];}}
 function saveMyOrder(b){
   const l=loadMyOrders().filter(x=>x.code!==b.code);l.unshift(b);
   try{localStorage.setItem("maxstyle_orders",JSON.stringify(l.slice(0,30)));}catch(e){}
 }
-// Expected delivery date: 5 working days (Mon-Fri) after the order date.
 function deliveryText(created){
   const d=new Date(created);let n=0;
   while(n<5){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)n++;}
@@ -378,7 +363,6 @@ function downloadBill(b){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
 }
 function downloadBillByCode(code){const b=loadMyOrders().find(x=>x.code===code);if(b)downloadBill(b);}
-// My orders opens as a full page (not a popup). The phone back button returns to the menu.
 function openMyOrders(){
   hideDrawers();
   let box=$("#moModal");
@@ -397,7 +381,6 @@ function closeMyOrders(){
   if(curV()==="mo"){history.back();}else{removeMyOrders();}
 }
 function removeMyOrders(){const b=$("#moModal");if(b)b.remove();}
-// "My orders / Bills" sits at the bottom of the side menu (uses the same style as the menu items).
 const moBtn=document.createElement("button");
 moBtn.className="mi";
 moBtn.textContent="My orders / Bills";
@@ -405,7 +388,7 @@ moBtn.onclick=()=>openMyOrders();
 $("#menu").appendChild(moBtn);
 
 
-// ---- Category circles: a product photo of that category inside each circle ----
+// ---- Category circles ----
 function renderCircs(){
   $$(".circs button").forEach(b=>{
     const c=b.dataset.circ||b.dataset.cat;
@@ -415,8 +398,7 @@ function renderCircs(){
   });
 }
 
-// ---- Auto-sliding products strip (moves by itself, pauses while touched) ----
-// Admin picks the products (slider position 1-15). If none are picked, the first 15 products are shown.
+// ---- Auto-sliding products strip ----
 let featTimer=null;
 function renderFeatured(){
   const f=$("#feat");if(!f)return;
