@@ -13,12 +13,26 @@ const FREE_DELIVERY_FROM = 7000; // free delivery when the items total (after di
 const DELIVERY_FEE = 350;        // courier delivery
 const COD_FEE = 150;             // extra fee for cash on delivery
 
-// Is this the first order from this phone number? (matched by the last 9 digits)
-async function isFirstOrder(env, phone) {
-  const last9 = String(phone || "").replace(/\D/g, "").slice(-9);
-  if (last9.length < 9) return false;
-  const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE phone1 LIKE ?").bind("%" + last9).first();
-  return !row || row.n === 0;
+// The signed-in customer for a token (or null).
+async function customerOf(env, token) {
+  if (!token) return null;
+  return await env.DB.prepare("SELECT id,phone FROM customers WHERE token=?").bind(String(token)).first();
+}
+
+// First order discount: only for a signed-in customer, and only when there is no active (not cancelled)
+// order from the account phone or from the phone typed at checkout. Phones are matched by their last 9 digits.
+// Deleting an account does not delete its orders, so a new account cannot get the discount again.
+async function isFirstOrder(env, token, phone) {
+  const c = await customerOf(env, token);
+  if (!c) return false;
+  const last9s = [...new Set([c.phone, phone]
+    .map(p => String(p || "").replace(/\D/g, "").slice(-9))
+    .filter(x => x.length === 9))];
+  for (const l of last9s) {
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE phone1 LIKE ? AND status<>'cancelled'").bind("%" + l).first();
+    if (row && row.n > 0) return false;
+  }
+  return true;
 }
 
 // Stock: sign +1 puts the items back, sign -1 takes them out. Products with no stock number (NULL) are not tracked.
@@ -112,8 +126,8 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  // Discounts and fees
-  const firstOrder = await isFirstOrder(env, phone1);
+  // Discounts and fees (first order discount: signed-in customers only)
+  const firstOrder = await isFirstOrder(env, b.token, phone1);
   const discount = firstOrder ? Math.round(subtotal * FIRST_ORDER_PCT / 100) : 0;
   const afterDiscount = subtotal - discount;
   const delivery = afterDiscount >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
@@ -130,9 +144,9 @@ export async function onRequestPost({ request, env }) {
 // Public: customer checks status with an order code. Admin (with password): full list, or ?stats=1 for statistics.
 export async function onRequestGet({ request, env }) {
   const q = new URL(request.url).searchParams;
-  // Public: is this phone number eligible for the first order discount? (returns only true/false)
+  // Public: is this signed-in customer eligible for the first order discount? (returns only true/false)
   if (q.has("firstcheck")) {
-    return J({ first: await isFirstOrder(env, q.get("firstcheck")) });
+    return J({ first: await isFirstOrder(env, q.get("token"), q.get("firstcheck")) });
   }
   if (!ok(request, env)) {
     const code = (q.get("code") || "").trim().toUpperCase();
