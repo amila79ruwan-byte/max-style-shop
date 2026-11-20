@@ -88,3 +88,15 @@
 #items .row>span:not(.qty){flex:1;min-width:0;font-weight:600;line-height:1.3}
 #items .row>span:not(.qty) small{display:block;margin-top:3px;font-weight:400;color:#756f60;font-size:12px}
 #items .row>b{white-space:nowrap}
+/* ===== Product popup: fits the screen ===== */
+.pm .pm-box{max-height:92vh;border-radius:22px 22px 0 0;padding:14px 16px 12px}
+.pm .pm-img{aspect-ratio:auto;height:min(42vh,380px);border-radius:14px}
+.pm .pm-img img{object-fit:cover}
+.pm .gal{border-radius:14px}
+.pm .gal img{flex:0 0 78%;max-width:78%;height:min(42vh,380px);aspect-ratio:auto}
+.pm .pm-x{top:22px;right:26px;width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:22px;line-height:1;display:grid;place-items:center;z-index:3}
+.pm h2{font-family:'Poppins',sans-serif;font-size:19px;margin:14px 0 2px}
+.pm .pm-opt{padding:10px 14px;border:1.5px solid #e6e1d3;border-radius:12px}
+.pm .pm-opt.on{background:#111;color:#f3d27a;border-color:#111}
+.pm .pm-q button{width:38px;height:38px;border:1.5px solid #e6e1d3;border-radius:50%}
+.pm .pm-add{position:sticky;bottom:0;height:52px;padding:0;border-radius:14px;background:linear-gradient(180deg,#e8c15a,#c9961a);color:#1a1405;box-shadow:0 -10px 14px #fff,0 4px 14px rgba(201,150,26,.35)}
