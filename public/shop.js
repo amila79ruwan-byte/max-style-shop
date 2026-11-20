@@ -85,7 +85,6 @@ function openDetail(id){
   detail=p;dSize="";dColor="";dQty=1;dChart=false;
   if(p.sizes.length===1)dSize=p.sizes[0];
   if(p.colorList.length===1)dColor=p.colorList[0].name;
-  // Load the product's extra photos (once), then show them in the popup.
   if(!p.photos){
     p.photos=[];
     fetch("/api/photos?product="+p.id).then(r=>r.json()).then(l=>{p.photos=l;if(detail===p)renderDetail();}).catch(()=>{});
@@ -193,10 +192,11 @@ function setCat(c){
   cat=c;
   onlyWish=false;
   renderGrid();
+  
+  // බ්‍රවුසර් එකට අලුත් පිටුවක් වගේ සේව් කරනවා
+  history.pushState({v:"shop"},"");
+  
   go("shop");
-  if(curV()!=="shop") {
-    history.pushState({v:"shop"},"");
-  }
 }
 
 $("#menuBtn").onclick=()=>openDr("menu");
@@ -457,4 +457,4 @@ fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();
     desc:p.description||"",
     chart:p.size_chart||""}));
   status="ok";renderGrid();renderCart();renderFeatured();renderCircs();
-}).catch(()=>{status="error";renderGrid();});
+}).catch(()=>{status:"error";renderGrid();});
