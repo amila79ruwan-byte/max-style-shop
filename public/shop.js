@@ -28,6 +28,8 @@ if(curV())history.replaceState(null,"");
 
 window.addEventListener("popstate",()=>{
   const v=curV();
+  
+  // වෙනත් පේජ් වල තියෙන මොඩල්ස් වහන්න
   if(v!=="ok"){const o=$("#okModal");if(o)o.remove();}
   if(v!=="co")hideCheckout();
   if(v!=="mo")removeMyOrders();
@@ -46,10 +48,14 @@ window.addEventListener("popstate",()=>{
   if(v==="cart"||v==="menu"){
     if(v==="cart"&&!keys().length){history.back();return;}
     showDr(v);
-  }else if(v==="shop"){
+  } else if(v==="shop"){
+    // වුමන් එකෙන් බැක් කරාම, මෙනු වහලා, උඩට ස්ක්‍රෝල් කරන්න
     hideDrawers();
-  }else {
+    window.scrollTo({top:0,behavior:"smooth"});
+  } else {
     hideDrawers();
+    // බැක් කරාම මුල් තැනට එන්න
+    window.scrollTo({top:0,behavior:"smooth"});
   }
 });
 
@@ -180,22 +186,13 @@ function closeDr(){
   const cur=curV();
   if(cur==="cart"||cur==="menu"){history.back();}else{hideDrawers();}
 }
+function go(id){hideDrawers();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
 
-// --- මෙතන තමයි වෙනස් වෙලා තියෙන්නේ (Back button එක හරියට වැඩ කරන්න) ---
-function go(id){
-  hideDrawers();
-  const shop = document.getElementById(id);
-  if(shop) shop.scrollIntoView({behavior:"smooth"});
-}
-
+// මෙතන තමයි වෙනස: වුමන් ඔබද්දි අලුත් history එකක් දානවා
 function setCat(c){
-  cat=c;
-  onlyWish=false;
-  renderGrid();
-  
-  // බ්‍රවුසර් එකට අලුත් පිටුවක් වගේ සේව් කරනවා
+  cat=c;onlyWish=false;renderGrid();
+  // අලුත් state එකක් එකතු කරනවා. බැක් කරාම මේක අයින් වෙලා කලින් තිබුණු පිටුවට එනවා
   history.pushState({v:"shop"},"");
-  
   go("shop");
 }
 
