@@ -100,3 +100,7 @@
 .pm .pm-opt.on{background:#111;color:#f3d27a;border-color:#111}
 .pm .pm-q button{width:38px;height:38px;border:1.5px solid #e6e1d3;border-radius:50%}
 .pm .pm-add{position:sticky;bottom:0;height:52px;padding:0;border-radius:14px;background:linear-gradient(180deg,#e8c15a,#c9961a);color:#1a1405;box-shadow:0 -10px 14px #fff,0 4px 14px rgba(201,150,26,.35)}
+/* ===== Product popup: show the whole photo ===== */
+.pm .pm-img{background:#f1ede2}
+.pm .pm-img img{object-fit:contain}
+.pm .gal img{object-fit:contain;background:#f1ede2;flex:0 0 100%;max-width:100%}
