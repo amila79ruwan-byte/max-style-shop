@@ -73,39 +73,51 @@ footer{background:var(--soft);margin-top:26px;padding:22px 16px;font-size:14px;c
 @media(prefers-reduced-motion:reduce){.dr{transition:none}html{scroll-behavior:auto}}
 
 /* ===== Category circles (අකුරු හරියටම මැදට) ===== */
-.circs{display:flex;justify-content:space-around;align-items:center;gap:6px;padding:14px 8px 8px}
-.circs button{
-  flex:none;
-  width:min(19vw,72px);
-  height:min(19vw,72px);
-  border-radius:50%;
-  border:2px solid var(--gold,#c9a24a);
-  background:#111 center/cover no-repeat;
-  color:#fff;
-  font:inherit;
-  padding:0;
-  position:relative;
-  overflow:hidden;
-  cursor:pointer;
-  transition:transform .15s,filter .15s;
-  -webkit-tap-highlight-color:transparent;
+.circs {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px 8px;
 }
-.circs button:active{transform:scale(.92);filter:brightness(.8)}
 
-/* මේකෙන් තමයි අකුරු මැදට ගන්නේ */
-.circs button span{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  width:100%;
-  font-family:'Poppins',sans-serif;
-  font-size:12px;
-  font-weight:700;
-  line-height:1.1;
-  text-align:center;
-  letter-spacing:0.5px;
-  text-shadow:0px 2px 4px rgba(0,0,0,0.9);
-  background:none;
-  padding:0;
+.circs button {
+  flex: none;
+  width: min(19vw, 72px);
+  height: min(19vw, 72px);
+  border-radius: 50%;
+  border: 2px solid var(--gold, #c9a24a);
+  background: #111 center/cover no-repeat;
+  color: #fff;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s;
+}
+
+.circs button:active {
+  transform: scale(.92);
+}
+
+/* මේකෙන් තමයි අකුරු හරියටම රවුමේ මැදට ගේන්නේ */
+.circs button span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  background: none;
+  padding: 2px;
+  z-index: 2;
 }
