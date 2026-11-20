@@ -55,3 +55,30 @@
 #okModal>div:first-child{width:76px;height:76px;margin:28px auto 0!important;border-radius:50%;background:#1f8a3b;color:#fff!important;font-size:40px!important;display:flex;align-items:center;justify-content:center}
 #okModal h2{font-family:'Poppins',sans-serif;font-size:21px!important}
 #okModal button,#okModal a{height:50px;display:flex!important;align-items:center;justify-content:center;border-radius:14px!important}
+/* ===== Gift row + switch ===== */
+#checkout #ckRow{background:#fdf5d8;border:1.5px solid #e6d9a8;border-radius:14px;padding:12px 14px;margin:0 0 14px;transition:border-color .15s,box-shadow .15s}
+#checkout #ckRow:has(#ckG:checked){border-color:#c9961a;box-shadow:0 0 0 3px rgba(201,150,26,.2)}
+#checkout #ckRow b{font-family:'Poppins','Noto Sans Sinhala',sans-serif;font-size:15px}
+#checkout #ckRow #ckG{-webkit-appearance:none;appearance:none;width:50px!important;min-width:50px;height:30px!important;border:0!important;border-radius:30px!important;background:#d9d3c0;position:relative;transition:background .2s;margin:0 0 0 auto!important}
+#checkout #ckRow #ckG::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+#checkout #ckRow #ckG:checked{background:#c9961a}
+#checkout #ckRow #ckG:checked::after{left:23px}
+#checkout .co input[type=checkbox]:not(#ckG){width:22px!important;height:22px;padding:0!important;margin:0!important;border-radius:6px!important}
+
+/* ===== Gift details box ===== */
+#checkout #ckGift{background:#faf8f3;border:1.5px solid #e6e1d3;border-radius:14px;padding:14px;margin:4px 0 14px}
+#checkout #ckGift .ckt{font-family:'Poppins','Noto Sans Sinhala',sans-serif;font-size:14px}
+#checkout #ckGift .ckn{background:#fdf5d8;border-radius:10px;padding:10px 12px}
+#checkout #ckGift input:not([type=checkbox]),#checkout #ckGift textarea{background:#fff}
+#checkout #ckGift .ckl{padding:6px 0}
+
+/* ===== Error / status message ===== */
+#checkout #msg:not(:empty){background:#fff6e0;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px}
+
+/* ===== Order placed page: bank box ===== */
+#okModal h2+p{display:inline-block;background:#fdf5d8;border-radius:999px;padding:5px 16px;font-size:15px!important}
+#okModal h2+p+div{background:#fff!important;border:1px solid #e6e1d3!important;border-radius:16px!important;padding:16px!important;max-width:440px!important;font-size:13px!important;line-height:1.6!important}
+#okModal h2+p+div>b:first-child{display:block;font-family:'Poppins',sans-serif;font-size:20px;margin-bottom:6px}
+#okModal h2+p+div>span{display:block;background:#fdf5d8;border:1.5px dashed #c9961a;border-radius:12px;padding:10px 12px;font-size:16px;font-weight:700;line-height:1.7;margin:4px 0}
+#okModal h2+p+div>hr{border-top-color:#e6e1d3!important}
+#okModal>div:last-child{max-width:440px!important}
