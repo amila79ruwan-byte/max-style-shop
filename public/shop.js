@@ -31,7 +31,7 @@ function toast(t){
 }
 
 // ---- Page history (phone back button) ----
-// Every page/popup that opens adds one history step: {v:"pm"|"cart"|"menu"|"cat"|"co"|"ok"|"mo"}.
+// Every page/popup that opens adds one history step: {v:"pm"|"cart"|"menu"|"co"|"ok"|"mo"}.
 // Back always returns to the page that was open before it.
 function curV(){return (history.state&&history.state.v)||"";}
 if(curV())history.replaceState(null,"");
@@ -41,8 +41,6 @@ window.addEventListener("popstate",()=>{
   if(v!=="co")hideCheckout();
   if(v!=="mo")removeMyOrders();
   if(v!=="pm")hideModal();
-  // Back to the home page from a category: show all products again.
-  if(v===""&&cat!=="all"){cat="all";onlyWish=false;renderGrid();}
   if(v==="cart"||v==="menu"){
     if(v==="cart"&&!keys().length){history.back();return;}
     showDr(v);
@@ -109,7 +107,6 @@ function renderDetail(){
     +photosHtml(p)
     +'<h2>'+esc(p.name)+'</h2>'
     +'<div class="pm-price">Rs. '+fmt(p.price)+'</div>'
-    +'<div style="font-size:12px;color:#1a7f37;font-weight:600;margin-top:2px">Free delivery over Rs. 7,000</div>'
     +'<div style="font-size:12px;color:#888;margin-top:2px">Code: '+pcode(p.id)+'</div>'
     +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
     +(p.colorList.length
@@ -137,7 +134,7 @@ function card(p){
   const img=p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0));
   return '<article class="card" onclick="openDetail('+p.id+')"><span class="new">NEW</span>'
    +'<button class="heart'+(wish.has(p.id)?" on":"")+'" onclick="event.stopPropagation();toggleWish('+p.id+')" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></button>'
-   +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+'</div><div style="font-size:11px;color:#1a7f37;font-weight:600;margin-bottom:4px">Free delivery over Rs. 7,000</div>'
+   +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+'</div>'
    +'<button class="add" onclick="event.stopPropagation();openDetail('+p.id+')">Add to cart</button></div></article>';
 }
 function renderGrid(){
@@ -182,15 +179,7 @@ function closeDr(){
   if(cur==="cart"||cur==="menu"){history.back();}else{hideDrawers();}
 }
 function go(id){closeDr();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
-// Opening a category is one history step, so back returns to the home page instead of leaving the site.
-function setCat(c){
-  cat=c;onlyWish=false;renderGrid();
-  hideDrawers();
-  const cur=curV();
-  if(cur==="menu"||cur==="cart")history.replaceState({v:"cat"},"");
-  else if(cur!=="cat")history.pushState({v:"cat"},"");
-  document.getElementById("shop").scrollIntoView({behavior:"smooth"});
-}
+function setCat(c){cat=c;onlyWish=false;renderGrid();go("shop");}
 
 $("#menuBtn").onclick=()=>openDr("menu");
 $("#cartBtn").onclick=()=>openDr("cart");
@@ -286,14 +275,12 @@ function closeCheckout(){
 }
 $("#toCheckout").onclick=openCheckout;
 $("#coBack").onclick=closeCheckout;
-$("#giftOn").onchange=e=>{$("#giftBox").style.display=e.target.checked?"block":"none";};
 
 $("#order").onclick=async()=>{
   const name=$("#name").value.trim(),phone=$("#phone").value.trim(),phone2=$("#phone2").value.trim(),district=$("#district").value,addr=$("#addr").value.trim(),ks=keys(),m=$("#msg");
   m.style.color="#c62828";
   if(!ks.length){m.textContent="Add at least one item first.";return;}
   if(!name||!phone||!district||!addr){m.textContent="Please fill in your name, phone number, district and address.";return;}
-  if($("#giftOn").checked){m.style.color="#c62828";m.textContent="Gift orders are not available yet (no cash on delivery for gifts). Card/Bank payment is coming soon.";return;}
   m.style.color="#1a7f37";m.textContent="Placing your order…";
   const items=ks.map(k=>{const {id,size,color}=parseKey(k);return {id,size,color,qty:cart[k]};});
   let d={};
@@ -435,7 +422,7 @@ function renderFeatured(){
   const f=$("#feat");if(!f)return;
   const picked=PRODUCTS.filter(p=>Number(p.feat_order)>0).sort((a,b)=>a.feat_order-b.feat_order).slice(0,15);
   const list=picked.length?picked:PRODUCTS.slice(0,15);
-  f.innerHTML=list.map(p=>'<div class="fi" onclick="openDetail('+p.id+')"><div class="fp">'+(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fn">'+esc(p.name)+'</div><div class="fr">Rs. '+fmt(p.price)+'</div><div style="font-size:10px;color:#1a7f37;font-weight:600;padding:0 8px 8px">Free delivery over Rs. 7,000</div></div>').join("");
+  f.innerHTML=list.map(p=>'<div class="fi" onclick="openDetail('+p.id+')"><div class="fp">'+(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fn">'+esc(p.name)+'</div><div class="fr">Rs. '+fmt(p.price)+'</div></div>').join("");
   startFeat();
 }
 function stopFeat(){if(featTimer){clearInterval(featTimer);featTimer=null;}}
