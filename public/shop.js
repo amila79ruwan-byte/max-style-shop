@@ -23,6 +23,8 @@ function toast(t){
 }
 
 // ---- Page history (phone back button) ----
+// Every page/popup adds one history step: {v:"pm"|"cart"|"menu"|"co"|"ok"|"mo"|"shop"}.
+// A "shop" step also remembers its category, so Back restores the category that was open before.
 function curV(){return (history.state&&history.state.v)||"";}
 if(curV())history.replaceState(null,"");
 
@@ -32,14 +34,13 @@ window.addEventListener("popstate",()=>{
   if(v!=="co")hideCheckout();
   if(v!=="mo")removeMyOrders();
   if(v!=="pm")hideModal();
-  
-  if(v==="menu"){
-    const sub=$("#clothSub");
-    if(sub && sub.classList.contains("open")){
-        sub.classList.remove("open");
-        $("#clothGrp").setAttribute("aria-expanded","false");
-        return; 
-    }
+
+  // Restore the category that belongs to this history step.
+  if(v==="shop"){
+    const c=(history.state&&history.state.cat)||"all";
+    if(c!==cat){cat=c;renderGrid();}
+  }else if(!v&&cat!=="all"){
+    cat="all";renderGrid();
   }
 
   if(v==="cart"||v==="menu"){
@@ -47,7 +48,8 @@ window.addEventListener("popstate",()=>{
     showDr(v);
   } else {
     hideDrawers();
-    window.scrollTo({top:0,behavior:"smooth"});
+    if(v==="shop"){const s=document.getElementById("shop");if(s)s.scrollIntoView({behavior:"smooth"});}
+    else window.scrollTo({top:0,behavior:"smooth"});
   }
 });
 
@@ -160,7 +162,11 @@ function renderCart(){
   $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;
   saveCart();
 }
-function hideDrawers(){$$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");}
+// Hiding the drawers also folds the "Dresses" group in the menu, so the menu always opens fresh.
+function hideDrawers(){
+  $$(".dr").forEach(d=>d.classList.remove("on"));$("#ov").classList.remove("on");
+  const s=$("#clothSub");if(s){s.classList.remove("open");const g=$("#clothGrp");if(g)g.setAttribute("aria-expanded","false");}
+}
 function showDr(id){
   hideDrawers();
   $("#"+id).classList.add("on");$("#ov").classList.add("on");
@@ -179,9 +185,12 @@ function closeDr(){
 }
 function go(id){hideDrawers();document.getElementById(id).scrollIntoView({behavior:"smooth"});}
 
+// Open a category. From the menu the menu step is replaced, so Back returns to what was open before the menu.
 function setCat(c){
   cat=c;onlyWish=false;renderGrid();
-  if(curV()!=="shop")history.pushState({v:"shop"},"");
+  const st={v:"shop",cat:c},cur=curV();
+  if(cur==="shop"||cur==="menu")history.replaceState(st,"");
+  else history.pushState(st,"");
   go("shop");
 }
 
@@ -292,155 +301,4 @@ $("#order").onclick=async()=>{
   const bill={code:d.code,created:Date.now(),name,phone1:phone,phone2,district,address:addr,
     items:d.lines.map(l=>({name:l.name,size:l.size,color:l.color,qty:l.qty,amount:l.price*l.qty})),total:d.total,subtotal:d.subtotal,discount:d.discount,delivery:d.delivery,codFee:d.codFee};
   saveMyOrder(bill);
-  cart={};saveCart();renderCart();
-  ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
-  $("#district").value="";
-  firstFlag=null;firstFor="";
-  m.textContent="";
-  showOrderDone(bill,text);
-};
-
-function showOrderDone(b,text){
-  hideDrawers();
-  hideCheckout();
-  let box=$("#okModal");
-  if(!box){
-    box=document.createElement("div");box.id="okModal";
-    box.style.cssText="position:fixed;inset:0;background:#fff;z-index:90;overflow-y:auto;padding:24px 18px;text-align:center";
-    document.body.appendChild(box);
-  }
-  box.innerHTML='<div style="font-size:60px;color:#1a7f37;margin-top:30px;line-height:1">✓</div>'
-    +'<h2 style="font-size:22px;margin:12px 0 8px">Order placed successfully!</h2>'
-    +'<p style="font-size:16px">Your order code: <b>'+esc(b.code)+'</b></p>'
-    +'<p style="color:#444;margin-top:10px">Delivery within 5 working days,<br>expected by <b>'+esc(deliveryText(b.created))+'</b></p>'
-    +'<div style="margin:26px auto 0;display:grid;gap:10px;max-width:320px">'
-    +'<button onclick="viewBillByCode(\''+esc(b.code)+'\')" style="padding:13px;background:#111;color:#f3d27a;border:0;border-radius:8px;font-weight:700;font-size:16px">View bill</button>'
-    +'<button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="padding:13px;border:1px solid #111;background:#fff;color:#111;border-radius:8px;font-weight:700;font-size:16px">Download bill</button>'
-    +'<a href="https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener" style="padding:13px;border-radius:8px;background:#25d366;color:#fff;font-weight:700;text-decoration:none;font-size:16px">Send to WhatsApp</a>'
-    +'<button onclick="closeOrderDone()" style="padding:13px;border:0;background:#eee;color:#111;border-radius:8px;font-weight:700;font-size:16px">Back to main page</button>'
-    +'</div>';
-  const cur=curV();
-  if(cur==="ok"){}
-  else if(cur==="co")history.replaceState({v:"ok"},"");
-  else history.pushState({v:"ok"},"");
-  window.scrollTo(0,0);
-}
-function closeOrderDone(){
-  const b=$("#okModal");if(b)b.remove();
-  if(curV()==="ok"){history.back();}
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-function viewBillByCode(code){
-  const b=loadMyOrders().find(x=>x.code===code);if(!b)return;
-  const url=URL.createObjectURL(new Blob([billHtml(b)],{type:"text/html"}));
-  window.open(url,"_blank");
-}
-
-function loadMyOrders(){try{return JSON.parse(localStorage.getItem("maxstyle_orders")||"[]")||[];}catch(e){return [];}}
-function saveMyOrder(b){
-  const l=loadMyOrders().filter(x=>x.code!==b.code);l.unshift(b);
-  try{localStorage.setItem("maxstyle_orders",JSON.stringify(l.slice(0,30)));}catch(e){}
-}
-function deliveryText(created){
-  const d=new Date(created);let n=0;
-  while(n<5){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)n++;}
-  return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Colombo"});
-}
-function billHtml(b){
-  const rows=b.items.map(i=>'<tr><td>'+esc(i.name)+(i.size?' ('+esc(i.size)+')':'')+(i.color?'<br><small>'+esc(i.color)+'</small>':'')+'</td><td>'+i.qty+'</td><td style="text-align:right">Rs. '+fmt(i.amount)+'</td></tr>').join("");
-  const when=new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
-  const r=(l,v,c)=>'<div class="r"'+(c?' style="color:'+c+'"':'')+'><span>'+l+'</span><span>'+v+'</span></div>';
-  const sum=(b.subtotal!==undefined
-      ?r("Items","Rs. "+fmt(b.subtotal))
-        +(b.discount?r("First order discount (10%)","- Rs. "+fmt(b.discount),"#1a7f37"):"")
-        +r("Delivery",b.delivery?"Rs. "+fmt(b.delivery):"Free")
-        +r("Cash on delivery fee","Rs. "+fmt(b.codFee))
-      :"")
-    +'<div class="r tot"><span>Total</span><span>Rs. '+fmt(b.total)+'</span></div>';
-  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill '+esc(b.code)+'</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin:12px 0 10px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.r{display:flex;justify-content:space-between;margin:5px 0;font-size:14px}.tot{font-size:17px;font-weight:700;border-top:1px solid #ddd;margin-top:10px;padding-top:8px}</style></head><body>'
-   +'<h1>Max Style</h1><div class="sub">Style without limits · 0722555929</div>'
-   +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span><br><span class="sub">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</span></p>'
-   +(b.name?'<p><b>'+esc(b.name)+'</b><br><span class="sub">'+esc(b.phone1)+(b.phone2?' / '+esc(b.phone2):'')+'<br>'+esc(b.address)+'<br>'+esc(b.district)+'</span></p>':'')
-   +'<table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr>'+rows+'</table>'
-   +sum
-   +'<p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
-}
-function downloadBill(b){
-  const blob=new Blob([billHtml(b)],{type:"text/html"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="MaxStyle-"+b.code+".html";
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
-}
-function downloadBillByCode(code){const b=loadMyOrders().find(x=>x.code===code);if(b)downloadBill(b);}
-function openMyOrders(){
-  hideDrawers();
-  let box=$("#moModal");
-  if(!box){
-    box=document.createElement("div");box.id="moModal";
-    box.style.cssText="position:fixed;inset:0;background:#fff;z-index:85;overflow-y:auto;padding:16px";
-    document.body.appendChild(box);
-  }
-  if(curV()!=="mo")history.pushState({v:"mo"},"");
-  const list=loadMyOrders();
-  box.innerHTML='<button class="sec" onclick="closeMyOrders()" style="width:auto;padding:10px 14px;margin-bottom:12px">← Back</button>'
-    +'<h2 style="font-size:20px;margin-bottom:10px">My orders</h2>'
-    +(list.length?list.map(b=>'<div style="border-bottom:1px solid #eee;padding:10px 0"><b>'+esc(b.code)+'</b> · Rs. '+fmt(b.total)+'<br><small style="color:#666">'+esc(new Date(b.created).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</small><br><small style="color:#666">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</small><br><button onclick="viewBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;margin-right:6px;padding:8px 12px;border:1px solid #111;background:#111;color:#f3d27a;border-radius:6px;font-weight:700">View bill</button><button onclick="downloadBillByCode(\''+esc(b.code)+'\')" style="margin-top:6px;padding:8px 12px;border:1px solid #111;background:#fff;color:#111;border-radius:6px;font-weight:700">Download bill</button></div>').join(""):'<p style="color:#666">No orders on this phone yet.</p>');
-}
-function closeMyOrders(){
-  if(curV()==="mo"){history.back();}else{removeMyOrders();}
-}
-function removeMyOrders(){const b=$("#moModal");if(b)b.remove();}
-const moBtn=document.createElement("button");
-moBtn.className="mi";
-moBtn.textContent="My orders / Bills";
-moBtn.onclick=()=>openMyOrders();
-$("#menu").appendChild(moBtn);
-
-// ---- Category circles: a product photo of that category inside each circle ----
-function renderCircs(){
-  $$(".circs button").forEach(b=>{
-    const c=b.dataset.circ||b.dataset.cat;
-    const cats=c==="dresses"?DRESS_CATS.map(x=>x[0]):[c];
-    const p=PRODUCTS.find(x=>x.image&&(c==="all"||cats.includes(x.cat)));
-    if(p)b.style.backgroundImage='url("'+p.image+'")';
-  });
-}
-
-// ---- Auto-sliding products strip ----
-let featTimer=null;
-function renderFeatured(){
-  const f=$("#feat");if(!f)return;
-  const picked=PRODUCTS.filter(p=>Number(p.feat_order)>0).sort((a,b)=>a.feat_order-b.feat_order).slice(0,15);
-  const list=picked.length?picked:PRODUCTS.slice(0,15);
-  f.innerHTML=list.map(p=>'<div class="fi" onclick="openDetail('+p.id+')"><div class="fp">'+(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fn">'+esc(p.name)+'</div><div class="fr">Rs. '+fmt(p.price)+'</div></div>').join("");
-  startFeat();
-}
-function stopFeat(){if(featTimer){clearInterval(featTimer);featTimer=null;}}
-function startFeat(){
-  stopFeat();
-  const f=$("#feat");if(!f||f.children.length<2)return;
-  featTimer=setInterval(()=>{
-    const step=f.children[0].offsetWidth+10;
-    if(f.scrollLeft+f.clientWidth>=f.scrollWidth-4)f.scrollTo({left:0,behavior:"smooth"});
-    else f.scrollBy({left:step,behavior:"smooth"});
-  },2500);
-}
-(function(){
-  const f=$("#feat");if(!f)return;
-  let rt=null;
-  f.addEventListener("touchstart",()=>{stopFeat();clearTimeout(rt);},{passive:true});
-  f.addEventListener("touchend",()=>{clearTimeout(rt);rt=setTimeout(startFeat,3000);});
-  document.addEventListener("visibilitychange",()=>{document.hidden?stopFeat():startFeat();});
-})();
-
-$("#wcnt").textContent=wish.size;
-renderGrid();renderCart();checkFirst();
-fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();}).then(l=>{
-  PRODUCTS=l.map(p=>({...p,
-    image:p.has_image?"/api/image?id="+p.id+"&v="+p.updated:"",
-    sizes:p.sizes?String(p.sizes).split(",").map(s=>s.replace(/[^\w.\-\/ ]/g,"").trim()).filter(Boolean):[],
-    colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
-    desc:p.description||"",
-    chart:p.size_chart||""}));
-  status="ok";renderGrid();renderCart();renderFeatured();renderCircs();
-}).catch(()=>{status="error";renderGrid();});
+  cart={};saveCart();renderCart()
