@@ -5,6 +5,10 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const listOf=v=>String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
 // Automatic product code: made from the product id (id 7 -> MS-P0007).
 const pcode=id=>"MS-P"+String(id).padStart(4,"0");
+// The "Dresses" circle opens this list (value = category used by the admin, label = shown name).
+const DRESS_CATS=[["women","Women"],["men","Men"],["kids","Kids"],["bedsheets","Bed Sheets"],["towels","Towels"],["pillows","Pillows"]];
+// Signed-in customer token (saved by account.js). The server uses it for the first order discount.
+const getTok=()=>{try{return localStorage.getItem("maxstyle_token")||"";}catch(e){return "";}};
 let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(loadWish()),cat="all",term="",onlyWish=false;
 let detail=null,dSize="",dColor="",dQty=1,dChart=false;
 $("#wa").href="https://wa.me/"+WHATSAPP;
@@ -164,6 +168,7 @@ function showDr(id){
 }
 function openDr(id){
   showDr(id);
+  if(id==="cart")checkFirst();
   const cur=curV();
   if(cur===id){}
   else if(cur==="pm"||cur==="menu"||cur==="cart")history.replaceState({v:id},"");
@@ -186,14 +191,40 @@ $("#wishBtn").onclick=()=>{cat="all";term="";onlyWish=!onlyWish;renderGrid();go(
 $("#searchBtn").onclick=()=>{$("#sbar").classList.toggle("on");$("#q").focus();};
 $("#q").oninput=e=>{term=e.target.value.trim().toLowerCase();renderGrid();};
 
+// ---- Round category buttons on the home page ----
+// "Dresses" opens a small list (Women, Men, Kids, Bed Sheets, Towels, Pillows). The others go straight to their products.
+function openDressSheet(){
+  let s=$("#dressSheet");
+  if(!s){
+    const css=document.createElement("style");
+    css.textContent="#dressSheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:84;display:none;align-items:flex-end;justify-content:center}#dressSheet.on{display:flex}#dressSheet .ds-box{background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:14px 16px 22px}#dressSheet .ds-h{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;margin-bottom:8px}#dressSheet .ds-h button{background:none;border:0;font-size:24px;color:#111;width:auto;padding:0 4px}#dressSheet .ds-i{display:flex;justify-content:space-between;align-items:center;width:100%;padding:14px 4px;border:0;border-bottom:1px solid #eee;background:none;font:inherit;font-size:16px;color:#111;text-align:left}#dressSheet .ds-i:last-child{border-bottom:0}#dressSheet .ds-i::after{content:'\\203A';color:#999;font-size:22px}";
+    document.head.appendChild(css);
+    s=document.createElement("div");s.id="dressSheet";
+    s.innerHTML='<div class="ds-box"><div class="ds-h"><span>Dresses</span><button data-dsx aria-label="Close">×</button></div>'
+      +DRESS_CATS.map(c=>'<button class="ds-i" data-dc="'+c[0]+'">'+esc(c[1])+'</button>').join("")+'</div>';
+    document.body.appendChild(s);
+    s.addEventListener("click",e=>{
+      if(e.target===s||e.target.closest("[data-dsx]")){s.classList.remove("on");return;}
+      const b=e.target.closest("[data-dc]");
+      if(b){s.classList.remove("on");setCat(b.dataset.dc);}
+    });
+  }
+  s.classList.add("on");
+}
+$$("[data-circ]").forEach(e=>e.addEventListener("click",()=>{
+  const c=e.dataset.circ;
+  if(c==="dresses")openDressSheet();else setCat(c);
+}));
+
 // ---- Totals: first order discount, delivery and cash on delivery fee ----
 // The browser shows this breakdown; the server calculates the final total again when the order is placed.
+// First order discount: only for a signed-in customer who has no earlier (not cancelled) order. The server decides.
 let firstFlag=null,firstFor="";
 function calcTotals(){
   const sub=keys().reduce((s,k)=>{const p=prodOf(k);return s+(p?p.price*cart[k]:0);},0);
   // Empty cart: everything is 0.
   if(!sub)return {sub:0,disc:0,after:0,del:0,cod:0,total:0};
-  const disc=firstFlag===true?Math.round(sub*0.10):0;
+  const disc=(getTok()&&firstFlag===true)?Math.round(sub*0.10):0;
   const after=sub-disc;
   const del=after>=7000?0:350;
   const cod=150;
@@ -211,15 +242,20 @@ function updateSummary(){
   const box=$("#sumBox");if(box)box.innerHTML=html;
   const cs=$("#cartSum");if(cs)cs.innerHTML=html;
   const t2=$("#total2");if(t2)t2.textContent=fmt(t.total);
+  // Small note about the 10% discount (elements with class "firstNote", if the page has them).
+  const note=!getTok()?"Sign in to get 10% off your first order":(firstFlag===true?"10% first order discount applied ✓":"");
+  $$(".firstNote").forEach(n=>{n.textContent=note;n.style.display=note?"block":"none";n.style.color=getTok()?"#1a7f37":"#8a6a1f";});
 }
-// Ask the server if this phone number is eligible for the first order discount (only true/false is returned).
+// Ask the server if this signed-in customer can get the first order discount (only true/false is returned).
 function checkFirst(){
-  const digits=($("#phone").value||"").replace(/\D/g,"");
-  if(digits.length<9){firstFlag=null;firstFor="";updateSummary();return;}
-  if(digits===firstFor)return;
-  firstFor=digits;
-  fetch("/api/orders?firstcheck="+encodeURIComponent(digits)).then(r=>r.json()).then(d=>{
-    if(firstFor===digits){firstFlag=!!d.first;updateSummary();}
+  const tok=getTok();
+  if(!tok){firstFlag=false;firstFor="";updateSummary();return;}
+  const digits=(($("#phone")&&$("#phone").value)||"").replace(/\D/g,"");
+  const key=tok+"|"+digits;
+  if(key===firstFor)return;
+  firstFor=key;
+  fetch("/api/orders?firstcheck="+encodeURIComponent(digits)+"&token="+encodeURIComponent(tok)).then(r=>r.json()).then(d=>{
+    if(firstFor===key){firstFlag=!!d.first;updateSummary();}
   }).catch(()=>{});
 }
 $("#phone").addEventListener("input",checkFirst);
@@ -230,6 +266,7 @@ function openCheckout(){
   if(!keys().length){toast("Add at least one item first");return;}
   $("#checkout").style.display="block";
   if(curV()!=="co")history.pushState({v:"co"},"");
+  checkFirst();
   window.scrollTo(0,0);
 }
 function hideCheckout(){const c=$("#checkout");if(c)c.style.display="none";}
@@ -248,7 +285,7 @@ $("#order").onclick=async()=>{
   const items=ks.map(k=>{const {id,size,color}=parseKey(k);return {id,size,color,qty:cart[k]};});
   let d={};
   try{
-    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,phone1:phone,phone2,district,address:addr,items})});
+    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,phone1:phone,phone2,district,address:addr,items,token:getTok()})});
     d=await r.json();
     if(!r.ok){m.style.color="#c62828";m.textContent=d.error||"Could not place order. Please try again.";return;}
   }catch(e){m.style.color="#c62828";m.textContent="Network error. Please try again.";return;}
@@ -261,6 +298,7 @@ $("#order").onclick=async()=>{
   cart={};saveCart();renderCart();
   ["#name","#phone","#phone2","#addr"].forEach(s=>$(s).value="");
   $("#district").value="";
+  firstFlag=null;firstFor="";   // the next order must be checked again
   m.textContent="";
   showOrderDone(bill,text);
 };
@@ -370,8 +408,9 @@ $("#menu").appendChild(moBtn);
 // ---- Category circles: a product photo of that category inside each circle ----
 function renderCircs(){
   $$(".circs button").forEach(b=>{
-    const c=b.dataset.cat;
-    const p=PRODUCTS.find(x=>x.image&&(c==="all"||x.cat===c));
+    const c=b.dataset.circ||b.dataset.cat;
+    const cats=c==="dresses"?DRESS_CATS.map(x=>x[0]):[c];
+    const p=PRODUCTS.find(x=>x.image&&(c==="all"||cats.includes(x.cat)));
     if(p)b.style.backgroundImage='url("'+p.image+'")';
   });
 }
@@ -405,7 +444,7 @@ function startFeat(){
 })();
 
 $("#wcnt").textContent=wish.size;
-renderGrid();renderCart();
+renderGrid();renderCart();checkFirst();
 fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();}).then(l=>{
   PRODUCTS=l.map(p=>({...p,
     image:p.has_image?"/api/image?id="+p.id+"&v="+p.updated:"",
