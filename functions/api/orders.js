@@ -12,6 +12,8 @@ const FIRST_ORDER_PCT = 10;      // first order discount, on the items total
 const FREE_DELIVERY_FROM = 7000; // free delivery when the items total (after discount) is this or more
 const DELIVERY_FEE = 350;        // courier delivery
 const COD_FEE = 150;             // extra fee for cash on delivery
+const GIFT_WRAP_FEE = 200;       // optional gift wrapping
+const SLIP_HOURS = 24;           // bank / online orders: payment slip must arrive within this time
 
 // The signed-in customer for a token (or null).
 async function customerOf(env, token) {
@@ -92,8 +94,19 @@ export async function onRequestPost({ request, env }) {
   const district = clean(b.district), address = String(b.address || "").trim().slice(0, 500);
   if (!name || !phone1 || !address || !DISTRICTS.includes(district)) return J({ error: "Please fill in all required fields." }, 400);
   if (!phoneOk(phone1) || (phone2 && !phoneOk(phone2))) return J({ error: "Please enter a valid phone number." }, 400);
-  if (b.payment && b.payment !== "cod") return J({ error: "This payment method is not available yet." }, 400);
-  const payment = "cod";
+  const payment = String(b.payment || "cod");
+  if (!["cod", "bank", "online"].includes(payment)) return J({ error: "This payment method is not available." }, 400);
+  const isGift = !!b.gift;
+  if (isGift && payment === "cod") return J({ error: "Cash on delivery is not available for gifts." }, 400);
+  let pm = null;   // chosen bank / online method
+  if (payment !== "cod") {
+    pm = await env.DB.prepare("SELECT id,type,title,details FROM pay_methods WHERE id=? AND active=1").bind(Number(b.payMethodId) || 0).first();
+    if (!pm || pm.type !== payment) return J({ error: "Please choose a payment method." }, 400);
+  }
+  const senderName = isGift ? clean(b.senderName).slice(0, 60) : "";
+  const senderPhone = isGift ? clean(b.senderPhone) : "";
+  if (isGift && (!senderName || !phoneOk(senderPhone))) return J({ error: "Please enter your name and phone number (sender)." }, 400);
+  const giftMsg = isGift ? String(b.giftMsg || "").trim().slice(0, 300) : "";
   const cartIn = Array.isArray(b.items) ? b.items : [];
   if (!cartIn.length || cartIn.length > 50) return J({ error: "Your cart is empty." }, 400);
 
@@ -132,13 +145,19 @@ export async function onRequestPost({ request, env }) {
   const afterDiscount = subtotal - discount;
   const delivery = afterDiscount >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
   const codFee = payment === "cod" ? COD_FEE : 0;
-  const total = afterDiscount + delivery + codFee;
+  const giftWrap = isGift && b.giftWrap ? GIFT_WRAP_FEE : 0;
+  const total = afterDiscount + delivery + codFee + giftWrap;
+  const payState = payment === "cod" ? "none" : "awaiting";   // awaiting = waiting for the payment slip
+  const now = Date.now();
 
+  const cols = "name,phone1,phone2,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee,is_gift,gift_wrap,gift_msg,sender_name,sender_phone,hide_sender,pay_state,pay_method_id";
   const r = await env.DB.prepare(
-    "INSERT INTO orders (name,phone1,phone2,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-  ).bind(name, phone1, phone2, district, address, JSON.stringify(lines), total, "received", Date.now(), payment, subtotal, discount, delivery, codFee).run();
+    "INSERT INTO orders (" + cols + ") VALUES (" + cols.split(",").map(() => "?").join(",") + ")"
+  ).bind(name, phone1, phone2, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
+    isGift ? 1 : 0, giftWrap, giftMsg, senderName, senderPhone, isGift && b.hideSender ? 1 : 0, payState, pm ? pm.id : 0).run();
   await adjustStock(env, lines, -1);
-  return J({ ok: true, code: codeOf(r.meta.last_row_id), subtotal, discount, delivery, codFee, total, lines });
+  return J({ ok: true, code: codeOf(r.meta.last_row_id), subtotal, discount, delivery, codFee, giftWrap, total, lines, payState,
+    payTitle: pm ? pm.title : "", payDetails: pm ? pm.details : "", deadline: payState === "awaiting" ? now + SLIP_HOURS * 3600000 : 0 });
 }
 
 // Public: customer checks status with an order code. Admin (with password): full list, or ?stats=1 for statistics.
