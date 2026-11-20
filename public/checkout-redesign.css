@@ -1,0 +1,57 @@
+/* Max Style – checkout redesign. Add AFTER shop.css:  <link rel="stylesheet" href="checkout-redesign.css"> */
+:root{--ck-line:#e6e1d3;--ck-cream:#fdf5d8;--ck-g1:#e8c15a;--ck-g2:#c9961a}
+
+/* ===== 1. Cart drawer ===== */
+#cart .dh{font-family:'Poppins','Noto Sans Sinhala',sans-serif;font-size:17px}
+#items .row{align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--ck-line)}
+#items .qty{border:1.5px solid var(--ck-line);border-radius:999px;gap:2px;padding:2px}
+#items .qty button{width:32px;height:32px;border:0;border-radius:50%;background:none;font-size:18px}
+#cart .co{padding:16px}
+#cart #cartSum{background:#faf8f3;border:1px solid var(--ck-line);border-radius:14px;padding:12px 14px;font-size:15px}
+#cart .dnote{background:var(--ck-cream);border-radius:12px;padding:11px 12px}
+#cart .firstNote{color:#8a6a1f}
+#toCheckout{width:100%;height:52px;padding:0;border-radius:14px;font-weight:700;font-size:16px;background:linear-gradient(180deg,var(--ck-g1),var(--ck-g2));box-shadow:0 4px 14px rgba(201,150,26,.35)}
+#toCheckout:active{transform:scale(.98)}
+
+/* ===== 2. Delivery details page ===== */
+#checkout{background:#f4f2ec!important;padding:0 0 28px!important}
+#checkout>div:first-child{position:sticky;top:0;z-index:3;margin:0!important;padding:10px 14px!important;background:#fff;border-bottom:1px solid var(--ck-line)}
+#checkout>div:first-child b{font-family:'Poppins','Noto Sans Sinhala',sans-serif;font-size:17px!important}
+#checkout #coBack{width:40px!important;height:40px;padding:0!important;border-radius:50%;border:1.5px solid var(--ck-line);background:#fff;font-size:0}
+#checkout #coBack::before{content:"‹";font-size:26px;line-height:1;color:#111}
+#checkout .co{background:#fff;margin:12px;padding:16px;border:1px solid var(--ck-line);border-radius:16px}
+#checkout .co input,#checkout .co textarea,#checkout #district{width:100%;padding:14px!important;border:1.5px solid var(--ck-line)!important;border-radius:12px!important;background:#faf8f3;font:inherit;font-size:15px!important;margin-bottom:10px!important;outline:0}
+#checkout .co input:focus,#checkout .co textarea:focus,#checkout #district:focus{border-color:#111!important;background:#fff}
+#checkout .co textarea{resize:none}
+#checkout .tot{background:var(--ck-cream);border:1px solid #e6d9a8;border-radius:12px;padding:12px 14px;font-size:17px;font-weight:700}
+#checkout #sumBox{background:#faf8f3;border-radius:12px;padding:10px 14px}
+#checkout #order{width:100%;height:52px;padding:0;border:0;border-radius:14px;font-weight:700;font-size:16px;background:linear-gradient(180deg,var(--ck-g1),var(--ck-g2));box-shadow:0 4px 14px rgba(201,150,26,.35)}
+#checkout #order:active{transform:scale(.98)}
+
+/* ===== 3. Payment page ===== */
+#ckPage{background:#f4f2ec}
+#ckPage .ckph{position:relative;padding:10px 14px 18px;border-bottom:1px solid var(--ck-line)}
+#ckPage .ckph::after{content:"";position:absolute;left:14px;right:14px;bottom:7px;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--ck-g2),var(--ck-g1))}
+#ckPage #ckBack{width:40px!important;height:40px;padding:0!important;border-radius:50%;border:1.5px solid var(--ck-line);background:#fff;font-size:0}
+#ckPage #ckBack::before{content:"‹";font-size:26px;line-height:1;color:#111}
+#ckPage .ckpt b{font-family:'Poppins','Noto Sans Sinhala',sans-serif;font-size:17px}
+#ckPage .ckc{border:1px solid var(--ck-line);border-radius:16px;padding:16px}
+#ckPage .ckch,#ckPage .ckrh{font-family:'Poppins','Noto Sans Sinhala',sans-serif;font-size:14px;font-weight:600;color:#14110a}
+#ckPage .ckrh a{font-weight:700;text-decoration:none;background:var(--ck-cream);padding:4px 12px;border-radius:999px}
+#ckPage .ckp{border:1.5px solid var(--ck-line);border-radius:14px;padding:14px;margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
+#ckPage .ckp.sel{border-color:var(--ck-g2);background:var(--ck-cream);box-shadow:0 0 0 3px rgba(201,150,26,.22)}
+#ckPage .ckp .cki{width:44px;height:44px}
+#ckPage .ckp .ckr{width:24px;height:24px;border-color:#cfc8b4}
+#ckPage .ckp.sel .ckr{border:7px solid var(--ck-g2);background:#fff}
+#ckPage .ckp .ckd{font-size:15px;line-height:1.7;font-weight:600;background:#fff;border:1.5px dashed var(--ck-g2);border-radius:12px;padding:12px 14px;margin-top:2px}
+#ckPage .cknote{background:#fff;border:1px solid var(--ck-line);border-left:4px solid var(--ck-g2);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6;margin-top:10px}
+#ckPage .ckbar{border-top:1px solid var(--ck-line);gap:14px}
+#ckPage .ckbar b{font-size:21px}
+#ckPage .ckbar .cta{height:52px;padding:0;border-radius:14px;font-weight:700;background:linear-gradient(180deg,var(--ck-g1),var(--ck-g2));box-shadow:0 4px 14px rgba(201,150,26,.35)}
+#ckPage .ckbar .cta:active{transform:scale(.98)}
+
+/* ===== 4. Order placed page (shop3.js version) ===== */
+#okModal{background:#f4f2ec!important}
+#okModal>div:first-child{width:76px;height:76px;margin:28px auto 0!important;border-radius:50%;background:#1f8a3b;color:#fff!important;font-size:40px!important;display:flex;align-items:center;justify-content:center}
+#okModal h2{font-family:'Poppins',sans-serif;font-size:21px!important}
+#okModal button,#okModal a{height:50px;display:flex!important;align-items:center;justify-content:center;border-radius:14px!important}
