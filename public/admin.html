@@ -71,7 +71,8 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
     <button id="gProducts" style="padding:18px;font-size:18px;margin-bottom:12px">Products</button>
     <button id="gOrders" style="padding:18px;font-size:18px;margin-bottom:12px">Orders</button>
     <button id="gStats" style="padding:18px;font-size:18px;margin-bottom:12px">Stats</button>
-    <button id="gBanners" style="padding:18px;font-size:18px">Banners</button>
+    <button id="gBanners" style="padding:18px;font-size:18px;margin-bottom:12px">Banners</button>
+    <button id="gPay" style="padding:18px;font-size:18px">Payment methods</button>
   </div>
 
   <!-- Step 1: choose a category -->
@@ -544,6 +545,7 @@ $("#gProducts").onclick=()=>showView("cats");
 $("#gOrders").onclick=()=>showView("orders");
 $("#gStats").onclick=()=>showView("stats");
 $("#gBanners").onclick=()=>showView("banners");
+$("#gPay").onclick=()=>{location.href="/paymethods.html";};
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>{
   if(history.state&&history.state.av)history.back();else showView("home");
 });
