@@ -22,9 +22,10 @@
 #chips::-webkit-scrollbar{display:none}
 #chips button{flex:none;white-space:nowrap}
 
-/* bottom nav: 3 buttons evenly spaced */
-.bn{display:flex;justify-content:space-around}
-.bn button{flex:1}
+/* bottom nav: 3 buttons evenly spaced, shorter */
+.bn{display:flex;justify-content:space-around;height:46px!important;min-height:0!important;padding:0!important}
+.bn button{flex:1;height:46px!important;padding:0!important;display:flex;align-items:center;justify-content:center}
+.bn svg{width:22px;height:22px}
 
 /* ===== Side menu (compact: fits the screen) ===== */
 #menu{overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;width:min(78vw,300px)}
@@ -63,10 +64,14 @@
 #menu .ml a.trk:active{transform:scale(.95);background:#000}
 #menu > .mi:last-child{margin-bottom:14px}
 
-/* ===== Category circles ===== */
-.circs{display:flex;justify-content:space-around;align-items:center;gap:8px;padding:16px 10px 8px}
-.circs button{flex:none;width:min(21vw,84px);height:min(21vw,84px);border-radius:50%;border:2px solid var(--gold,#c9a24a);background:#111;color:#fff;font:inherit;font-size:12px;font-weight:700;line-height:1.15;padding:0;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:transform .15s,background .15s;-webkit-tap-highlight-color:transparent}
-.circs button:active{transform:scale(.92);background:#000}
+/* ===== 10% sign in strip (under the banner) ===== */
+.promo2{margin:8px 12px 0;padding:8px 12px;background:#f7f4ea;border:1px solid #e6d9a8;border-radius:10px;text-align:center;font-size:13px;font-weight:600;color:#6b5314}
+
+/* ===== Category circles: 5 small circles, photo inside ===== */
+.circs{display:flex;justify-content:space-around;align-items:center;gap:6px;padding:14px 8px 8px}
+.circs button{flex:none;width:min(17vw,66px);height:min(17vw,66px);border-radius:50%;border:2px solid var(--gold,#c9a24a);background:#111 center/cover no-repeat;color:#fff;font:inherit;padding:0;position:relative;overflow:hidden;cursor:pointer;transition:transform .15s,filter .15s;-webkit-tap-highlight-color:transparent}
+.circs button:active{transform:scale(.92);filter:brightness(.8)}
+.circs button span{position:absolute;left:0;right:0;bottom:0;padding:12px 1px 5px;background:linear-gradient(transparent,rgba(0,0,0,.75));font-size:10px;font-weight:700;line-height:1.1;text-align:center}
 
 /* ===== Auto-sliding products strip ===== */
 .feat{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8px 12px 12px}
@@ -86,19 +91,9 @@
 .banner .bn-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
 .banner .bn-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55)}
 .banner .bn-dots i.on{background:#fff}
-
-/* ===== Bottom bar: shorter ===== */
-.bn{height:46px!important;min-height:0!important;padding:0!important}
-.bn button{height:46px!important;padding:0!important;display:flex;align-items:center;justify-content:center}
-.bn svg{width:22px;height:22px}
-
-/* ===== Category circles: photo inside the circle ===== */
-.circs button{position:relative;overflow:hidden;background:#111 center/cover no-repeat}
-.circs button span{position:absolute;left:0;right:0;bottom:0;padding:14px 2px 7px;background:linear-gradient(transparent,rgba(0,0,0,.7));font-size:11px}
 </style>
 </head>
 <body>
-<div class="promo">Sign up and get 10% off on your first order</div>
 
 <header>
   <button class="ib" id="menuBtn" aria-label="Open menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
@@ -119,24 +114,27 @@
     <div class="bn-dots" id="bnDots"></div>
   </div>
 
+  <div class="promo2" id="promo2">Sign in to get 10% off your first order</div>
+
   <div class="circs">
-    <button data-cat="all"><span>New<br>Arrivals</span></button>
-    <button data-cat="women"><span>Women</span></button>
-    <button data-cat="men"><span>Men</span></button>
-    <button data-cat="kids"><span>Kids</span></button>
+    <button data-circ="dresses"><span>Dresses</span></button>
+    <button data-circ="phone"><span>Phone</span></button>
+    <button data-circ="umbrella"><span>Umbrellas</span></button>
+    <button data-circ="bags"><span>Bags</span></button>
+    <button data-circ="school"><span>School</span></button>
   </div>
 
   <div class="feat" id="feat"></div>
 
   <div id="shop"></div>
   <div class="chips" id="chips">
-    <button class="on" data-cat="all">All</button><button data-cat="women">Women</button><button data-cat="men">Men</button><button data-cat="kids">Kids</button><button data-cat="phone">Phone Accessories</button><button data-cat="toys">Toys</button><button data-cat="electric">Electrical</button><button data-cat="umbrella">Umbrellas</button><button data-cat="bags">Bags</button><button data-cat="school">School &amp; Books</button>
+    <button class="on" data-cat="all">All</button><button data-cat="women">Women</button><button data-cat="men">Men</button><button data-cat="kids">Kids</button><button data-cat="bedsheets">Bed Sheets</button><button data-cat="towels">Towels</button><button data-cat="pillows">Pillows</button><button data-cat="phone">Phone Accessories</button><button data-cat="toys">Toys</button><button data-cat="electric">Electrical</button><button data-cat="umbrella">Umbrellas</button><button data-cat="bags">Bags</button><button data-cat="school">School &amp; Books</button>
   </div>
   <div class="pgrid" id="grid"></div>
 </main>
 
 <footer id="contact">
-  <b>Max Style</b><br>Style without limits.<br>Order on WhatsApp for fast delivery.
+  <b>Max Style</b><br>Style without limits.<br>© 2027 Max Style. All rights reserved.
 </footer>
 
 <a class="fab" id="wa" href="#" target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.2 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.6c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.3z"/></svg></a>
@@ -157,6 +155,9 @@
     <button class="mi" data-cat="women"><span>Women</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
     <button class="mi" data-cat="men"><span>Men</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
     <button class="mi" data-cat="kids"><span>Kids</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="mi" data-cat="bedsheets"><span>Bed Sheets</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="mi" data-cat="towels"><span>Towels</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="mi" data-cat="pillows"><span>Pillows</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
   </div>
   <button class="mi" data-cat="phone"><span>Phone Accessories</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
   <button class="mi" data-cat="toys"><span>Toys</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -167,8 +168,8 @@
   <button class="mi" data-cat="all"><span>New Arrivals</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
   <button class="mi off" data-cat="all"><span>Offers</span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
   <div class="ml">
-    <a href="#contact" data-close>Contact Us</a>
-    <a href="#contact" data-close>Delivery and Returns</a>
+    <a href="contact.html">Contact Us</a>
+    <a href="returns.html">Delivery and Returns</a>
     <a class="trk" href="track.html">Track Order</a>
   </div>
 </aside>
@@ -179,7 +180,8 @@
   <div class="co">
     <div id="cartSum" style="margin:6px 0 8px;font-size:15px"></div>
     <span id="total" style="display:none">0</span>
-    <small style="display:block;color:#666;margin-bottom:6px;font-size:12px">First order: 10% discount applies when you enter your phone number. Free delivery on orders over Rs. 7,000.</small>
+    <div class="firstNote" style="display:none;font-size:13px;font-weight:600;margin-bottom:6px"></div>
+    <small style="display:block;color:#666;margin-bottom:6px;font-size:12px">Free delivery on orders over Rs. 7,000.</small>
     <div class="dnote"><span>🚚</span><span>Delivery within <b>5 working days</b></span></div>
     <b style="display:block;margin-bottom:6px;font-size:14px">Payment method</b>
     <label class="pay sel"><input type="radio" name="pay" value="cod" checked> <span>Cash on delivery</span></label>
@@ -205,6 +207,7 @@
     <textarea id="addr" rows="3" placeholder="Delivery address"></textarea>
     <div class="tot" style="margin-top:6px"><span>Total (Cash on delivery)</span><span>Rs. <span id="total2">0</span></span></div>
     <div id="sumBox" style="margin:10px 0;font-size:15px"></div>
+    <div class="firstNote" style="display:none;font-size:13px;font-weight:600;margin-bottom:8px"></div>
     <button class="cta" id="order">Place order</button>
     <div id="msg" role="status"></div>
   </div>
@@ -215,7 +218,12 @@
 <script src="shop.js"></script>
 <script src="account.js"></script>
 
-<!-- Side menu: expand/collapse Clothing group -->
+<!-- Hide the 10% sign in strip when the customer is already signed in -->
+<script>
+try{if(localStorage.getItem("maxstyle_token")){var p2=document.getElementById("promo2");if(p2)p2.style.display="none";}}catch(e){}
+</script>
+
+<!-- Side menu: expand/collapse Dresses group -->
 <script>
 (function(){
   var g=document.getElementById('clothGrp'),s=document.getElementById('clothSub');
