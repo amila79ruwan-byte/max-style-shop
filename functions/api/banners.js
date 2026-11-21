@@ -1,3 +1,4 @@
+import { readJson } from "../_lib/json.js";
 // Home page banners (slideshow). Public: the shown banners. Admin (password): all banners, add, edit, delete.
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
@@ -27,7 +28,8 @@ export const onRequestGet = safe(async ({ request, env }) => {
 
 export const onRequestPost = safe(async ({ request, env }) => {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
-  const b = await request.json();
+  const b = await readJson(request);
+  if (!b) return J({ error: "Bad request" }, 400);
   const text = String(b.text || "").trim().slice(0, 120);
   const link = String(b.link || "").trim().slice(0, 300);
   const pos = parseInt(b.pos, 10) || 0;
