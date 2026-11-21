@@ -9,10 +9,14 @@ export async function onRequestGet({ env }) {
   const cols = "id,name,price,cat,sizes,colors,description,size_chart,stock,feat_order,(image IS NOT NULL AND image<>'') AS has_image,updated";
   let results;
   try {
-    ({ results } = await env.DB.prepare("SELECT " + cols + ",offer FROM products ORDER BY id DESC").all());
+    ({ results } = await env.DB.prepare("SELECT " + cols + ",offer,old_price FROM products ORDER BY id DESC").all());
   } catch (e) {
-    // The offer column is not added yet (migrate_offer.sql not run): the shop keeps working, just without offers.
-    ({ results } = await env.DB.prepare("SELECT " + cols + " FROM products ORDER BY id DESC").all());
+    // old_price column not added yet (migrate_old_price.sql not run): the shop keeps working without it.
+    try {
+      ({ results } = await env.DB.prepare("SELECT " + cols + ",offer FROM products ORDER BY id DESC").all());
+    } catch (e2) {
+      ({ results } = await env.DB.prepare("SELECT " + cols + " FROM products ORDER BY id DESC").all());
+    }
   }
   return J(results);
 }
@@ -58,6 +62,11 @@ export async function onRequestPost({ request, env }) {
   // The same number can only belong to one product: remove it from any other product.
   if (feat > 0) await env.DB.prepare("UPDATE products SET feat_order=0 WHERE feat_order=? AND id<>?").bind(feat, id).run();
   if (b.image) await env.DB.prepare("UPDATE products SET image=? WHERE id=?").bind(b.image, id).run();
+  // Old price (before the offer, shown crossed out). Only kept when it is higher than the real price; otherwise 0.
+  // The real price in the "price" column is what customers pay: this number is for display only.
+  let oldPrice = parseInt(b.old_price, 10);
+  if (!(oldPrice > price)) oldPrice = 0;
+  try { await env.DB.prepare("UPDATE products SET old_price=? WHERE id=?").bind(oldPrice, id).run(); } catch (e) { /* column not added yet */ }
   return J({ ok: true, id });
 }
 
