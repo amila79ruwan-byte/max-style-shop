@@ -176,7 +176,7 @@ export async function onRequestGet({ request, env }) {
     return J({ code, status: row.status, items: JSON.parse(row.items), total: row.total, created: row.created });
   }
   if (q.has("stats")) return J(await buildStats(env));
-  const { results } = await env.DB.prepare("SELECT * FROM orders ORDER BY id DESC LIMIT 200").all();
+  const { results } = await env.DB.prepare("SELECT o.*, p.title AS pay_title FROM orders o LEFT JOIN pay_methods p ON p.id=o.pay_method_id ORDER BY o.id DESC LIMIT 200").all();
   return J(results.map(o => ({ ...o, code: codeOf(o.id), items: JSON.parse(o.items) })));
 }
 
