@@ -1,4 +1,5 @@
 import { expireUnpaid, SLIP_HOURS } from "../_lib/expire.js";
+import { hit } from "../_lib/ratelimit.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const STATUSES = ["received", "confirmed", "packed", "out", "delivered", "cancelled"];
@@ -122,6 +123,7 @@ export async function onRequestPost({ request, env }) {
     const m = String(b.code || "").trim().toUpperCase().match(/^MS-(\d+)$/);
     const pn = last9(b.phone);
     if (!m || pn.length !== 9) return J({ error: "Invalid details" }, 400);
+    if (!(await hit(env, "slip:" + clientIp(request), 20, 3600000))) return J({ error: "Too many tries. Please try again later." }, 429);
     const r = await env.DB.prepare("UPDATE orders SET pay_state='slip_sent' WHERE id=? AND phone_norm=? AND pay_state='awaiting'")
       .bind(Number(m[1]) - 1000, pn).run();
     return J({ ok: true, changed: !!(r.meta && r.meta.changes > 0) });
@@ -239,6 +241,8 @@ export async function onRequestGet({ request, env }) {
   await expireUnpaid(env);
   // Public: is this signed-in customer eligible for the first order discount? (returns only true/false)
   if (q.has("firstcheck")) {
+    // Max 30 checks per hour per connection: stops people probing which phone numbers have ordered before.
+    if (!(await hit(env, "fc:" + clientIp(request), 30, 3600000))) return J({ error: "Too many tries. Please try again later.", first: false }, 429);
     const bearer = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     return J({ first: await isFirstOrder(env, bearer || q.get("token"), q.get("firstcheck")) });
   }
@@ -258,6 +262,8 @@ export async function onRequestGet({ request, env }) {
       await env.DB.prepare("INSERT INTO login_attempts (k,n,locked_until,updated) VALUES (?,?,0,?) ON CONFLICT(k) DO UPDATE SET n=?, updated=?")
         .bind(tk, cnt + 1, cnt ? t.updated : tn, cnt + 1, cnt ? t.updated : tn).run();
     } catch (e) {}
+    // Also limit tries per order code (20 per hour), so changing IP address does not help someone guess the 4 digits.
+    if (!(await hit(env, "trkc:" + m[1], 20, 3600000))) return J({ error: "Too many tries for this order. Please try again later or WhatsApp us." }, 429);
     const row = await env.DB.prepare("SELECT status,items,total,created,phone_norm FROM orders WHERE id=?").bind(Number(m[1]) - 1000).first();
     if (!row || !row.phone_norm || row.phone_norm.slice(-4) !== p4) return J({ error: "Order not found. Please check the code and phone digits." }, 404);
     return J({ code, status: row.status, items: parseItems(row.items), total: row.total, created: row.created });
