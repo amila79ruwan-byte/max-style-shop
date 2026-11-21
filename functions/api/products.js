@@ -62,6 +62,9 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestDelete({ request, env }) {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
   const id = new URL(request.url).searchParams.get("id");
-  await env.DB.prepare("DELETE FROM products WHERE id=?").bind(id).run();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM product_photos WHERE product_id=?").bind(id),   // its extra photos go too
+    env.DB.prepare("DELETE FROM products WHERE id=?").bind(id)
+  ]);
   return J({ ok: true });
 }
