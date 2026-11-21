@@ -181,7 +181,9 @@ function authHtml() {
       + '<label>District</label><select id="aD"><option value="">Select district</option>' + DISTRICTS.map(d => '<option>' + d + '</option>').join("") + '</select>'
       + '<label>Delivery address</label><textarea id="aA" rows="3"></textarea>' : '')
     + '<button class="ac-btn" data-act="' + (up ? 'doSignup' : 'doLogin') + '">' + (up ? 'Create account' : 'Sign in') + '</button>'
-    + '<div class="ac-err" id="aErr"></div></div>';
+    + '<div class="ac-err" id="aErr"></div>'
+    + (up ? '' : '<a href="https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent("Hi Max Style, I forgot my PIN. Please reset it for me. My phone number: ") + '" onclick="var i=document.getElementById(\'aP\');this.href=\'https://wa.me/' + WHATSAPP + '?text=\'+encodeURIComponent(\'Hi Max Style, I forgot my PIN. Please reset it for me. My phone number: \'+(i?i.value.trim():\'\'))" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:12px;color:#1a7f37;font-weight:600;text-decoration:none">Forgot your PIN? Message us on WhatsApp</a>')
+    + '</div>';
 }
 function purchases() {
   curOrders = P ? serverBills() : loadMyOrders();
