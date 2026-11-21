@@ -2,11 +2,14 @@
 // Loaded LAST (after account.js). It overrides applyAddr / fillCheckout / ckForm / ckValidate.
 // Form order: Name, District, City (auto list by district), Address, Postal code (optional), Phone, Alternate phone (optional).
 (function () {
+  const escH = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const $id = id => document.getElementById(id);
-  const FIELDS = ["name", "district", "city", "cityOther", "addr", "postal", "phone", "phone2", "addrPick"];
+  const FIELDS = ["name", "rowDC", "cityOther", "addr", "rowPP", "phone2", "addrPick"];
   let editing = false;     // signed-in customer pressed "Edit"
   let giftMode = false;    // gift to someone else: always show the full form
 
+  // Keep only digits and "+" (spaces, dashes, dots, brackets, Sinhala/Arabic digits typed by mistake are removed).
+  const cleanPhone = v => String(v || "").replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^\d+]/g, "");
   const cityVal = () => {
     const c = $id("city"); if (!c) return "";
     return c.value === "__other" ? ($id("cityOther").value || "").trim() : c.value;
@@ -15,15 +18,16 @@
     const a = ($id("addr").value || "").trim(), c = cityVal(), p = ($id("postal").value || "").trim();
     return a + (c ? ", " + c : "") + (p ? " " + p : "");
   };
-  const loggedIn = () => { try { return typeof P !== "undefined" && !!P && !!getTok(); } catch (e) { return false; } };
+  const ACC = () => window.MSAcc || null;
+  const loggedIn = () => { try { const a = ACC(); return !!(a && a.getP() && a.getTok()); } catch (e) { return false; } };
 
   // ---- City list (depends on the district) ----
   function fillCities(district, selected) {
     const c = $id("city"), o = $id("cityOther"); if (!c) return;
-    const list = (typeof CITIES !== "undefined" && CITIES[district]) || [];
+    const list = (ACC() && ACC().CITIES[district]) || [];
     const inList = list.includes(selected);
     c.innerHTML = '<option value="">Select city</option>'
-      + list.map(x => '<option' + (x === selected ? " selected" : "") + ">" + esc(x) + "</option>").join("")
+      + list.map(x => '<option' + (x === selected ? " selected" : "") + ">" + escH(x) + "</option>").join("")
       + '<option value="__other"' + (selected && !inList ? " selected" : "") + ">Other</option>";
     o.style.display = selected && !inList ? "block" : "none";
     o.value = selected && !inList ? selected : "";
@@ -49,8 +53,8 @@
       const line = [$id("addr").value.trim(), cityVal(), $id("district").value].filter(Boolean).join(", ")
         + (($id("postal").value || "").trim() ? " · " + $id("postal").value.trim() : "");
       card.style.cssText = "display:flex;gap:10px;align-items:flex-start;border:1.5px solid #e6e0cf;background:#faf8f3;border-radius:12px;padding:12px;margin-bottom:10px";
-      card.innerHTML = '<div style="flex:1;min-width:0;font-size:14px;line-height:1.45"><b>' + esc($id("name").value.trim()) + "</b><br>"
-        + esc(line) + '<br><span style="color:#666">' + esc(ph) + "</span></div>"
+      card.innerHTML = '<div style="flex:1;min-width:0;font-size:14px;line-height:1.45"><b>' + escH($id("name").value.trim()) + "</b><br>"
+        + escH(line) + '<br><span style="color:#666">' + escH(ph) + "</span></div>"
         + '<button type="button" id="addrEdit" style="flex:none;border:1px solid #111;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600">Edit</button>';
       $id("addrEdit").onclick = () => { editing = true; render(); };
     } else if (useForm) {
@@ -67,23 +71,23 @@
   }
 
   // ---- Overrides of account.js / shop4.js functions ----
-  window.applyAddr = function (a) {
+  window.msApplyAddr = function (a) {
     if (!a) return;
     setAddress({ name: a.name, phone: a.phone, phone2: a.phone2, district: a.district, city: a.city, postal: a.postal, address: a.address });
     render();
   };
-  window.fillCheckout = function () {
-    refreshPicker();
+  window.msFill = function () {
     if (!loggedIn()) { render(); return; }
+    const P = ACC().getP();
     if (!$id("name").value && !giftMode) {
-      const d = defAddr();
+      const d = ACC().defAddr();
       if (d) setAddress({ name: d.name, phone: d.phone, phone2: d.phone2, district: d.district, city: d.city, postal: d.postal, address: d.address });
       else setAddress({ name: P.name, phone: P.phone, phone2: P.phone2, district: P.district, city: "", postal: "", address: P.address });
     }
     editing = false; render();
   };
   window.ckForm = function () {
-    return { name: $id("name").value.trim(), phone: $id("phone").value.trim(), phone2: $id("phone2").value.trim(),
+    return { name: $id("name").value.trim(), phone: cleanPhone($id("phone").value), phone2: cleanPhone($id("phone2").value),
       district: $id("district").value, addr: combinedAddr(),
       sn: $id("ckSn").value.trim(), sp: $id("ckSp").value.trim(), gm: $id("ckMsg").value.trim() };
   };
@@ -93,6 +97,9 @@
     if (e) return e;
     if (!$id("addr").value.trim()) return "Please enter the address.";
     if (!cityVal()) return "Please select your city.";
+    const f = window.ckForm();
+    if (f.phone.replace(/\D/g, "").length < 9 || f.phone.length > 15) return "Please enter a valid phone number (like 0771234567).";
+    if (f.phone2 && (f.phone2.replace(/\D/g, "").length < 9 || f.phone2.length > 15)) return "Alternate phone number is not valid. Leave it empty or enter a full number.";
     return "";
   };
 
@@ -109,7 +116,7 @@
     if (e.target && e.target.id === "ckG") {                              // gift: receiver's address is typed fresh
       giftMode = e.target.checked;
       if (giftMode) { ["name", "phone", "phone2", "addr", "postal"].forEach(id => $id(id).value = ""); $id("district").value = ""; fillCities("", ""); render(); }
-      else window.fillCheckout();
+      else window.msFill();
     }
   });
   // After an order the old code clears the fields: also clear city / postal and go back to the right mode.
