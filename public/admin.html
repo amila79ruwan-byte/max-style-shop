@@ -185,6 +185,11 @@ M|96|70"></textarea>
     <button id="badd">Add banner</button>
     <div class="msg" id="bmsg"></div>
   </div>
+  <div class="box">
+    <b>Category circle photos</b>
+    <div class="hint" style="margin:6px 0 4px">The round buttons under the banner (Dresses, Phone, School, Bags). Pick a photo for each one, it is made square automatically. With no photo it uses the first product photo of that category.</div>
+    <div id="circs"></div>
+  </div>
   <div class="box" id="blist"></div>
   </div>
 </div>
@@ -578,6 +583,42 @@ $("#badd").onclick=async()=>{
   msg.style.color="#1a7f37";msg.textContent="Added ✓";loadBanners();
 };
 
+
+// ---- Category circle photos (the round buttons on the home page) ----
+const CIRCS=[["dresses","Dresses"],["phone","Phone"],["school","School"],["bags","Bags"]];
+async function cropSquare(file){
+  const img=await createImageBitmap(file),s=Math.min(img.width,img.height),c=document.createElement("canvas");
+  c.width=c.height=Math.min(400,s);
+  c.getContext("2d").drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,c.width,c.height);
+  return c.toDataURL("image/jpeg",.85);
+}
+async function loadCircs(){
+  let m={},err="";
+  try{
+    const r=await fetch("/api/circles");
+    if(r.ok)m=await r.json();else err="Circle photo API not found (status "+r.status+"). Upload functions/api/circles.js and circle-image.js to GitHub.";
+  }catch(e){err="Circle photo API is not working. Check functions/api/circles.js and circle-image.js are on GitHub.";}
+  $("#circs").innerHTML=(err?`<div class="msg">${err}</div>`:"")+CIRCS.map(([k,n])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #eee;margin-top:8px">
+      <img src="${m[k]||"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:#222;border:2px solid #c9a24a;flex:none">
+      <div style="flex:1;min-width:0"><b style="display:block;margin-bottom:4px">${n}</b><input type="file" accept="image/*" data-cup="${k}" style="margin:0">
+      ${m[k]?`<button class="del" data-crm="${k}" style="margin-top:6px">Remove photo</button>`:""}<div class="msg" data-cm="${k}" style="margin:4px 0 0"></div></div></div>`).join("");
+}
+$("#circs").addEventListener("change",async e=>{
+  const k=e.target.dataset.cup,f=e.target.files[0];if(!k||!f)return;
+  const msg=document.querySelector(`[data-cm="${k}"]`);msg.style.color="#111";msg.textContent="Uploading…";
+  let r;
+  try{r=await fetch("/api/circles",{method:"POST",headers:hdr(),body:JSON.stringify({key:k,image:await cropSquare(f)})});}
+  catch(x){msg.style.color="#c62828";msg.textContent="Could not upload";return;}
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){msg.style.color="#c62828";msg.textContent=d.error||(r.status===404||r.status===405?"circles.js is not uploaded to functions/api yet":"Could not upload (status "+r.status+")");return;}
+  loadCircs();
+});
+$("#circs").addEventListener("click",async e=>{
+  const k=e.target.dataset.crm;if(!k||!confirm("Remove this photo?"))return;
+  await fetch("/api/circles?key="+k,{method:"DELETE",headers:hdr()});
+  loadCircs();
+});
+
 // Screens: home -> (Products) categories -> products of one category. Also Orders / Stats / Banners.
 // The phone back button goes back one step (instead of leaving the page).
 function showView(v,fromHistory){
@@ -590,7 +631,7 @@ function showView(v,fromHistory){
   window.scrollTo(0,0);
   if(v==="cats"){editId=null;renderCats();}
   if(v==="stats")loadStats();
-  if(v==="banners")loadBanners();
+  if(v==="banners"){loadBanners();loadCircs();}
   if(fromHistory)return;
   if(v==="home"){ if(history.state&&history.state.av)history.back(); }
   else if(!(history.state&&history.state.av===v))history.pushState({av:v},"");
