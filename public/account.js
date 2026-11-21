@@ -195,7 +195,7 @@ function purchases() {
     + '<br><span class="ac-muted">' + esc(dateTxt(b.created)) + '</span><br>'
     + '<span class="ac-muted">Delivery within 5 working days, by ' + esc(deliveryText(b.created)) + '</span><br>'
     + '<button data-bill="' + i + '">Download bill</button>'
-    + ((P && (b.status === 'packed' || b.status === 'out')) ? ' <button data-confirm="' + i + '">I received my order</button>' : '')
+    + ((P && b.status === 'out') ? ' <button data-confirm="' + i + '">I received my order</button>' : '')
     + '</div>').join("") + '</div>';
 }
 
