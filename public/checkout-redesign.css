@@ -104,3 +104,20 @@
 .pm .pm-img{background:#f1ede2}
 .pm .pm-img img{object-fit:contain}
 .pm .gal img{object-fit:contain;background:#f1ede2;flex:0 0 100%;max-width:100%}
+/* ===== Gift row: smaller, moved below the address ===== */
+#checkout .co{display:flex;flex-direction:column}
+#checkout .co>*{order:0}
+#checkout #ckRow{order:1;margin:2px 0 12px;padding:9px 12px;gap:10px;border-radius:12px}
+#checkout #ckGift{order:2}
+#checkout #sumBox,#checkout .co .tot{order:3}
+#checkout .co .firstNote{order:4}
+#checkout #order{order:5}
+#checkout #msg{order:6}
+
+#checkout #ckRow .ckgi{width:32px;height:32px}
+#checkout #ckRow svg{width:17px;height:17px}
+#checkout #ckRow b{font-size:14px}
+#checkout #ckRow small{font-size:12px}
+#checkout #ckRow #ckG{width:42px!important;min-width:42px;height:24px!important}
+#checkout #ckRow #ckG::after{width:18px;height:18px;left:3px;top:3px}
+#checkout #ckRow #ckG:checked::after{left:21px}
