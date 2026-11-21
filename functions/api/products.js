@@ -1,3 +1,4 @@
+import { readJson } from "../_lib/json.js";
 import { expireUnpaid } from "../_lib/expire.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
@@ -18,7 +19,8 @@ export async function onRequestGet({ env }) {
 
 export async function onRequestPost({ request, env }) {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
-  const b = await request.json();
+  const b = await readJson(request);
+  if (!b) return J({ error: "Bad request" }, 400);
   if (b.check) return J({ ok: true });
   const name = String(b.name || "").trim(), price = parseInt(b.price, 10), cat = b.cat;
   if (!name || !(price >= 0) || !CATS.includes(cat)) return J({ error: "Invalid data" }, 400);
