@@ -216,7 +216,8 @@ export async function onRequestGet({ request, env }) {
   const q = new URL(request.url).searchParams;
   // Public: is this signed-in customer eligible for the first order discount? (returns only true/false)
   if (q.has("firstcheck")) {
-    return J({ first: await isFirstOrder(env, q.get("token"), q.get("firstcheck")) });
+    const bearer = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+    return J({ first: await isFirstOrder(env, bearer || q.get("token"), q.get("firstcheck")) });
   }
   if (!ok(request, env)) {
     const code = (q.get("code") || "").trim().toUpperCase();
