@@ -94,17 +94,14 @@
 .banner .bn-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55)}
 .banner .bn-dots i.on{background:#fff}
 /* ===== Home page v2 ===== */
-.banner{background:#fff;padding:8px 0 0;display:block}
-.banner .bn-slide.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 10px;box-sizing:border-box}
-.banner .bn-slide.one{padding:0 10px;box-sizing:border-box}
-.banner .bx{display:block;min-width:0}
-.banner .bx img,.banner .bn-slide.one img{width:100%;height:auto;aspect-ratio:2.4/1;object-fit:cover;border-radius:10px;display:block}
-.banner .bn-dots{position:static;padding:6px 0 0;pointer-events:none}
-.banner .bn-dots i{width:6px;height:6px;background:#d4d4d4}
-.banner .bn-dots i.on{background:#b8860b}
 .trust{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 0;text-align:center}
-.trust div{font-size:10px;line-height:1.2;color:#555}
-.trust svg{display:block;margin:0 auto 2px;width:20px;height:20px;fill:none;stroke:#b8860b;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.trust{padding:12px 8px 2px}
+.trust div{font-size:11px;font-weight:600;line-height:1.2;color:#333}
+.trust svg{display:block;margin:0 auto 5px;box-sizing:content-box;width:20px;height:20px;padding:9px;border-radius:50%;fill:none;stroke:var(--ic);background:var(--bg);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.trust div:nth-child(1){--ic:#2563eb;--bg:#e6eefe}
+.trust div:nth-child(2){--ic:#16a34a;--bg:#e3f5e9}
+.trust div:nth-child(3){--ic:#ea580c;--bg:#fdece0}
+.trust div:nth-child(4){--ic:#9333ea;--bg:#f3e6fd}
 .promo2{margin:8px 12px 0;padding:5px 10px;border-radius:999px;font-size:12px}
 .circs button[hidden]{display:none}
 .circs .fs .cp{background:#fff;border:3px solid #d92d20;display:flex;align-items:center;justify-content:center;animation:fsPulse 2.4s ease-in-out infinite}
@@ -186,8 +183,6 @@
     <div class="fdh"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Flash deals</div>
     <div class="fdw"><div class="fdt" id="flashTrack"></div></div>
   </div>
-
-  <div class="feat" id="feat"></div>
 
   <div id="shop"></div>
   <div class="chips" id="chips">
@@ -367,20 +362,13 @@ try{if(localStorage.getItem("maxstyle_token")){var p2=document.getElementById("p
     timer=setInterval(function(){go(i+1)},3500);
   }
 
-  function box(b){
-    var img='<img src="'+esc(b.image)+'" alt="'+esc(b.text)+'">';
-    var l=safeLink(b.link);
-    return l?'<a class="bx" href="'+esc(l)+'">'+img+'</a>':'<div class="bx">'+img+'</div>';
-  }
   function render(list){
-    var html='',n=0;
-    for(var k=0;k<list.length;k+=2){
-      var pair=list.slice(k,k+2);
-      html+='<div class="bn-slide '+(pair.length===2?'two':'one')+'">'+pair.map(box).join('')+'</div>';
-      n++;
-    }
-    track.innerHTML=html;
-    dots.innerHTML=n>1?Array.apply(null,Array(n)).map(function(_,k){return '<i'+(k===0?' class="on"':'')+'></i>'}).join(''):'';
+    track.innerHTML=list.map(function(b){
+      var img='<img src="'+esc(b.image)+'" alt="'+esc(b.text)+'">';
+      var l=safeLink(b.link);
+      return l?'<a class="bn-slide" href="'+esc(l)+'">'+img+'</a>':'<div class="bn-slide">'+img+'</div>';
+    }).join('');
+    dots.innerHTML=list.length>1?list.map(function(_,k){return '<i'+(k===0?' class="on"':'')+'></i>'}).join(''):'';
     i=0;
     track.style.transform='translateX(0)';
     start();
