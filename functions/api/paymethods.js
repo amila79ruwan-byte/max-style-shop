@@ -1,3 +1,4 @@
+import { readJson } from "../_lib/json.js";
 // Payment methods (bank deposit / online transfer). Public: the active ones. Admin (password): all, add, edit, delete.
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
@@ -22,7 +23,8 @@ export const onRequestGet = safe(async ({ request, env }) => {
 
 export const onRequestPost = safe(async ({ request, env }) => {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
-  const b = await request.json();
+  const b = await readJson(request);
+  if (!b) return J({ error: "Bad request" }, 400);
   const type = String(b.type || "");
   const title = String(b.title || "").trim().slice(0, 60);
   const details = String(b.details || "").trim().slice(0, 600);
