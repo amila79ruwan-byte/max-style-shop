@@ -222,13 +222,20 @@ export async function onRequestPost({ request, env }) {
   const cols = "name,phone1,phone2,phone_norm,customer_id,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee,is_gift,gift_wrap,gift_msg,sender_name,sender_phone,hide_sender,pay_state,pay_method_id";
   let r;
   try {
-  r = await env.DB.prepare(
-    "INSERT INTO orders (" + cols + ") VALUES (" + cols.split(",").map(() => "?").join(",") + ")"
-  ).bind(name, phone1, phone2, phoneN, cust ? cust.id : 0, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
-    isGift ? 1 : 0, giftWrap, giftMsg, senderName, senderPhone, isGift && b.hideSender ? 1 : 0, payState, pm ? pm.id : 0).run();
+    // One single statement: the order is saved only if the phone still has fewer than 2 unconfirmed orders at this very moment.
+    // (Checking first and saving after could be fooled by two orders sent at the same time.)
+    r = await env.DB.prepare(
+      "INSERT INTO orders (" + cols + ") SELECT " + cols.split(",").map(() => "?").join(",") +
+      " WHERE (SELECT COUNT(*) FROM orders WHERE phone_norm=? AND status='received') < 2"
+    ).bind(name, phone1, phone2, phoneN, cust ? cust.id : 0, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
+      isGift ? 1 : 0, giftWrap, giftMsg, senderName, senderPhone, isGift && b.hideSender ? 1 : 0, payState, pm ? pm.id : 0, phoneN).run();
   } catch (e) {
     await releaseStock(env, res.taken);   // the order could not be saved: put the stock back
     return J({ error: "Could not place the order. Please try again." }, 500);
+  }
+  if (!(r.meta && r.meta.changes > 0)) {   // blocked by the 2-open-orders rule: put the stock back
+    await releaseStock(env, res.taken);
+    return J({ error: "You already have 2 orders waiting for confirmation. Please wait for us to confirm them, or WhatsApp us." }, 429);
   }
   return J({ ok: true, code: codeOf(r.meta.last_row_id), subtotal, discount, delivery, codFee, giftWrap, total, lines, payState,
     payTitle: pm ? pm.title : "", payDetails: pm ? pm.details : "", deadline: payState === "awaiting" ? now + SLIP_HOURS * 3600000 : 0 });
