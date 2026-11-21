@@ -1,8 +1,10 @@
+import { expireUnpaid } from "../_lib/expire.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const normList = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(s => String(s).trim()).filter(Boolean).join(",");
 const CATS = ["women", "men", "kids", "bedsheets", "towels", "pillows", "phone", "toys", "electric", "umbrella", "bags", "school"];
 export async function onRequestGet({ env }) {
+  await expireUnpaid(env);   // unpaid bank / online orders past the deadline are cancelled and their stock freed
   const cols = "id,name,price,cat,sizes,colors,description,size_chart,stock,feat_order,(image IS NOT NULL AND image<>'') AS has_image,updated";
   let results;
   try {
