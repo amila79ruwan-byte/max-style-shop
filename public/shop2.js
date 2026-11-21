@@ -154,13 +154,15 @@ function billHtml(b){
       ?r("Items","Rs. "+fmt(b.subtotal))
         +(b.discount?r("First order discount (10%)","- Rs. "+fmt(b.discount),"#1a7f37"):"")
         +r("Delivery",b.delivery?"Rs. "+fmt(b.delivery):"Free")
-        +r("Cash on delivery fee","Rs. "+fmt(b.codFee))
+        +(b.codFee?r("Cash on delivery fee","Rs. "+fmt(b.codFee)):"")
+        +(b.giftWrap?r("Gift wrapping","Rs. "+fmt(b.giftWrap)):"")
       :"")
     +'<div class="r tot"><span>Total</span><span>Rs. '+fmt(b.total)+'</span></div>';
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill '+esc(b.code)+'</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin:12px 0 10px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.r{display:flex;justify-content:space-between;margin:5px 0;font-size:14px}.tot{font-size:17px;font-weight:700;border-top:1px solid #ddd;margin-top:10px;padding-top:8px}</style></head><body>'
    +'<h1>Max Style</h1><div class="sub">Style without limits · 0722555929</div>'
    +'<p style="margin-top:14px"><b>Bill: '+esc(b.code)+'</b><br><span class="sub">'+esc(when)+'</span><br><span class="sub">Delivery within 5 working days, by '+esc(deliveryText(b.created))+'</span></p>'
    +(b.name?'<p><b>'+esc(b.name)+'</b><br><span class="sub">'+esc(b.phone1)+(b.phone2?' / '+esc(b.phone2):'')+'<br>'+esc(b.address)+'<br>'+esc(b.district)+'</span></p>':'')
+   +(b.payState==="awaiting"?'<p class="sub">Payment: '+esc(b.payTitle||"Bank / online transfer")+' (slip pending)</p>':(b.payState==="none"?'<p class="sub">Payment: Cash on delivery</p>':''))
    +'<table><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr>'+rows+'</table>'
    +sum
    +'<p class="sub" style="margin-top:14px">Thank you for shopping with us!</p></body></html>';
