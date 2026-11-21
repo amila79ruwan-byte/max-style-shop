@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS products (
   stock INTEGER,                      -- NULL = not tracked
   feat_order INTEGER DEFAULT 0,       -- home slider position 1-15, 0 = hidden
   offer INTEGER DEFAULT 0,
+  old_price INTEGER DEFAULT 0,        -- price before the offer (shown crossed out); 0 = none
   updated INTEGER DEFAULT 0
 );
 
