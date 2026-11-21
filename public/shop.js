@@ -136,7 +136,7 @@ function renderDetail(){
     '<button class="pm-x" data-x aria-label="Close">×</button>'
     +'<div class="pm-left">'+photosHtml(p)+'</div><div class="pm-right">'
     +'<h2>'+esc(p.name)+'</h2>'
-    +'<div class="pm-price">Rs. '+fmt(p.price)+'</div>'
+    +'<div class="pm-price">Rs. '+fmt(p.price)+oldPrice(p)+'</div>'
     +'<div style="font-size:12px;color:#888;margin-top:2px">Code: '+pcode(p.id)+'</div>'
     +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
     +(p.colorList.length
@@ -162,11 +162,13 @@ function addFromDetail(){
   renderCart();hideModal();openDr("cart");
 }
 
+// Old price (crossed out) + discount %, only when the admin set an old price higher than the real price. Display only.
+function oldPrice(p){const o=Number(p.old_price)||0;return o>p.price?'<s class="oldp">Rs. '+fmt(o)+'</s>':'';}
 function card(p){
   const img=p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0));
   return '<article class="card" onclick="openDetail('+p.id+')">'+(newIds.has(p.id)?'<span class="new">NEW</span>':'')
    +'<button class="heart'+(wish.has(p.id)?" on":"")+'" onclick="event.stopPropagation();toggleWish('+p.id+')" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></button>'
-   +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+'</div>'
+   +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+oldPrice(p)+'</div>'
    +'<button class="add" onclick="event.stopPropagation();openDetail('+p.id+')">Add to cart</button></div></article>';
 }
 function renderGrid(){
