@@ -51,7 +51,7 @@ async function login(){
 function payLine(o){
   const p=o.payment||"cod";
   if(p==="cod")return "Cash on delivery";
-  return (p==="bank"?"Bank Deposit":"Online Transfer")+(o.pay_title?" · "+o.pay_title:"")+(o.pay_state==="awaiting"?" · Slip pending":"");
+  return (p==="bank"?"Bank Deposit":"Online Transfer")+(o.pay_title?" · "+o.pay_title:"")+(o.pay_state==="awaiting"?" · Slip pending":o.pay_state==="slip_sent"?" · Slip sent, please check":o.pay_state==="paid"?" · Paid ✓":"");
 }
 // Gift box for an order card: who sent it, the message, wrapping, and whether the sender's name must stay hidden.
 // For a gift, the name / phone / address on the card are the RECEIVER's.
@@ -84,8 +84,15 @@ async function load(){
       <div class="row"><b>Rs. ${money(o.total)}</b>
         <select onchange="setStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select>
       </div>
+      ${(o.payment||"cod")!=="cod"&&o.pay_state!=="paid"?`<p style="margin-top:10px"><button class="sec" onclick="markPaid(${o.id})">Slip ආවා ✓ · Mark as paid</button></p>`:""}
       <p style="margin-top:10px"><a class="wa" href="https://wa.me/${waNum(o.phone1)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp customer</a></p>
     </div>`;}).join(""):"<p>No orders yet.</p>";
+}
+async function markPaid(id){
+  if(!confirm("Slip එක බලලා ගෙවීම ලැබුණාද? Mark as paid?"))return;
+  const r=await fetch("/api/orders",{method:"PUT",headers:hdr(),body:JSON.stringify({id,pay_state:"paid"})});
+  if(!r.ok)alert("Could not update.");
+  load();
 }
 async function setStatus(id,status){
   const r=await fetch("/api/orders",{method:"PUT",headers:hdr(),body:JSON.stringify({id,status})});
