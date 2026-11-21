@@ -6,6 +6,7 @@ const listOf=v=>String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
 const pcode=id=>"MS-P"+String(id).padStart(4,"0");
 const DRESS_CATS=[["women","Women"],["men","Men"],["kids","Kids"],["bedsheets","Bed Sheets"],["towels","Towels"],["pillows","Pillows"]];
 const getTok=()=>{try{return localStorage.getItem("maxstyle_token")||"";}catch(e){return "";}};
+let newIds=new Set();   // the 12 newest products: they get the NEW label and make up "New Arrivals"
 let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(loadWish()),cat="all",term="",onlyWish=false;
 let detail=null,dSize="",dColor="",dQty=1,dChart=false;
 $("#wa").href="https://wa.me/"+WHATSAPP;
@@ -134,7 +135,7 @@ function addFromDetail(){
 
 function card(p){
   const img=p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0));
-  return '<article class="card" onclick="openDetail('+p.id+')"><span class="new">NEW</span>'
+  return '<article class="card" onclick="openDetail('+p.id+')">'+(newIds.has(p.id)?'<span class="new">NEW</span>':'')
    +'<button class="heart'+(wish.has(p.id)?" on":"")+'" onclick="event.stopPropagation();toggleWish('+p.id+')" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></button>'
    +'<div class="ph">'+img+'</div><div class="info"><h3>'+esc(p.name)+'</h3><div class="price">Rs. '+fmt(p.price)+'</div>'
    +'<button class="add" onclick="event.stopPropagation();openDetail('+p.id+')">Add to cart</button></div></article>';
@@ -143,8 +144,11 @@ function renderGrid(){
   const g=$("#grid");
   if(status==="loading"){g.innerHTML='<p class="empty">Loading…</p>';return;}
   if(status==="error"){g.innerHTML='<p class="empty">Could not load products. Please refresh.</p>';return;}
-  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&(cat==="all"||p.cat===cat)&&(p.name.toLowerCase().includes(term)||pcode(p.id).toLowerCase().includes(term)));
-  g.innerHTML=list.length?list.map(card).join(""):'<p class="empty">'+(onlyWish?"Your wishlist is empty. Tap the heart on a product to save it.":"No products found.")+"</p>";
+  newIds=new Set(PRODUCTS.slice().sort((a,b)=>b.id-a.id).slice(0,12).map(p=>p.id));
+  // cat "new" = New Arrivals (the 12 newest), cat "offers" = products marked as an offer in the admin page
+  const inCat=p=>cat==="all"||(cat==="new"?newIds.has(p.id):cat==="offers"?!!Number(p.offer):p.cat===cat);
+  const list=PRODUCTS.filter(p=>(!onlyWish||wish.has(p.id))&&inCat(p)&&(p.name.toLowerCase().includes(term)||pcode(p.id).toLowerCase().includes(term)));
+  g.innerHTML=list.length?list.map(card).join(""):'<p class="empty">'+(onlyWish?"Your wishlist is empty. Tap the heart on a product to save it.":cat==="offers"&&!term?"No offers right now. Please check again soon.":"No products found.")+"</p>";
   $$("#chips button").forEach(b=>b.classList.toggle("on",b.dataset.cat===cat));
 }
 function toggleWish(id){wish.has(id)?wish.delete(id):wish.add(id);saveWish();$("#wcnt").textContent=wish.size;renderGrid();}
