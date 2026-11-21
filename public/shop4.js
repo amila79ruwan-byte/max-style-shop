@@ -29,7 +29,9 @@ function updateSummary(){
     +'<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total</span><span>Rs. '+fmt(t.total-t.cod+cod)+'</span></div>'
     +(withCod||!t.sub?'':'<div style="font-size:12px;color:#777;margin-top:6px">+ Rs. '+fmt(ckCod)+' only if you choose cash on delivery (you pick the payment method on the next page).</div>');
   };
-  const box=$("#sumBox");if(box)box.innerHTML=build(true);
+  // #sumBox is on the address page (step 1, payment not chosen yet) and is moved into the payment page (step 2).
+  // The cash on delivery fee is added only once the customer is on the payment page.
+  const box=$("#sumBox");if(box)box.innerHTML=build(!!box.closest("#ckPage"));
   const cs=$("#cartSum");if(cs)cs.innerHTML=build(false);
   const t2=$("#total2");if(t2)t2.textContent=fmt(t.total);
   const note=!getTok()?"Sign in to get 10% off your first order":(firstFlag===true?"10% first order discount applied ✓":"");
