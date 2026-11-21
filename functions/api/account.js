@@ -1,3 +1,4 @@
+import { hit } from "../_lib/ratelimit.js";
 // Customer accounts: sign up / sign in with phone + 4-digit PIN, profile, saved addresses, and order history.
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const enc = new TextEncoder();
@@ -161,6 +162,8 @@ export async function onRequestPost({ request, env }) {
     let tok = newToken();
     if (act === "signup") {
       if (row) return J({ error: "This phone number already has an account. Please sign in." }, 409);
+      // Max 5 new accounts per hour per connection: stops mass fake sign-ups.
+      if (!(await hit(env, "signup:" + clientIp(request), 5, 3600000))) return J({ error: "Too many sign-ups from this connection. Please try again later." }, 429);
       const name = String(b.name || "").trim();
       if (!name) return J({ error: "Enter your name" }, 400);
       await env.DB.prepare(
@@ -192,7 +195,7 @@ export async function onRequestPost({ request, env }) {
     const o = await env.DB.prepare("SELECT id,status FROM orders WHERE id=? AND customer_id=?")
       .bind(id, p.id).first();
     if (!o) return J({ error: "Order not found" }, 404);
-    if (!["packed", "out"].includes(o.status)) return J({ error: "This order cannot be confirmed now" }, 400);
+    if (o.status !== "out") return J({ error: "You can confirm only after the order is out for delivery" }, 400);
     await env.DB.prepare("UPDATE orders SET status='delivered' WHERE id=?").bind(id).run();
     return J({ ok: true });
   }
