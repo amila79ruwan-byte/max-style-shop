@@ -18,13 +18,13 @@ function renderFlash(){
   let base=offers.slice();while(base.length<6)base=base.concat(offers);
   const one=p=>{
     const o=Number(p.old_price)||0,off=o>p.price?Math.round((o-p.price)*100/o):0;
-    return '<div class="fdi" onclick="openDetail('+p.id+')"><div class="fdp">'+(off?'<b>-'+off+'%</b>':'')
+    return '<div class="fdi" onclick="openDetail('+p.id+')"><div class="fdp">'+(off?'<b>'+off+'% OFF</b>':'')
       +(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fdn">'+esc(p.name)
       +'</div><div class="fdr">Rs. '+fmt(p.price)+(o>p.price?'<s>'+fmt(o)+'</s>':'')+'</div></div>';
   };
   const html=base.map(one).join("");
   tr.innerHTML=html+html;   // twice, so the run loops without a gap
-  tr.style.setProperty("--fd-dur",(base.length*3.5)+"s");
+  tr.style.setProperty("--fd-dur",(base.length*4.5)+"s");
 }
 
 // ---- Auto-sliding products strip ----
