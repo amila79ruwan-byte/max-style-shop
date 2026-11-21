@@ -18,7 +18,7 @@ const GIFT_WRAP_FEE = 200;       // optional gift wrapping
 // The signed-in customer for a token (or null).
 async function customerOf(env, token) {
   if (!token) return null;
-  return await env.DB.prepare("SELECT id,phone FROM customers WHERE token=?").bind(String(token)).first();
+  return await env.DB.prepare("SELECT id,phone FROM customers WHERE token=? AND (token_exp=0 OR token_exp>?)").bind(String(token), Date.now()).first();
 }
 
 // First order discount: only for a signed-in customer, and only when there is no active (not cancelled)
