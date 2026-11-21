@@ -3,6 +3,11 @@ const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: 
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const MAX_BANNERS = 6;
 
+// The photo itself is not sent in the list (it is big). The list gives a small URL, and the browser loads + caches the photo from it.
+// VER changes when the photo is replaced (size + a few bytes from the middle), so a new photo gets a new URL.
+const VER = "length(image) || '-' || hex(substr(image, length(image)/2, 6)) AS ver";
+const withUrl = ({ ver, ...b }) => ({ ...b, image: "/api/banner-image?id=" + b.id + "&v=" + encodeURIComponent(ver) });
+
 // Any unexpected error comes back as JSON with the message, instead of a blank Cloudflare error page.
 const safe = fn => async ctx => {
   try { return await fn(ctx); }
@@ -11,13 +16,13 @@ const safe = fn => async ctx => {
 
 export const onRequestGet = safe(async ({ request, env }) => {
   if (ok(request, env)) {
-    const { results } = await env.DB.prepare("SELECT id,image,text,link,pos,active FROM banners ORDER BY pos,id").all();
-    return J(results);
+    const { results } = await env.DB.prepare("SELECT id,text,link,pos,active," + VER + " FROM banners ORDER BY pos,id").all();
+    return J(results.map(withUrl));
   }
   const { results } = await env.DB.prepare(
-    "SELECT id,image,text,link,pos FROM banners WHERE active=1 ORDER BY pos,id LIMIT ?"
+    "SELECT id,text,link,pos," + VER + " FROM banners WHERE active=1 ORDER BY pos,id LIMIT ?"
   ).bind(MAX_BANNERS).all();
-  return J(results);
+  return J(results.map(withUrl));
 });
 
 export const onRequestPost = safe(async ({ request, env }) => {
