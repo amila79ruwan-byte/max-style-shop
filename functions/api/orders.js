@@ -8,6 +8,8 @@ const codeOf = id => "MS-" + (1000 + Number(id));
 const phoneOk = p => /^[0-9+\s-]{9,15}$/.test(p);
 const last9 = p => String(p || "").replace(/\D/g, "").slice(-9);
 const clientIp = r => r.headers.get("cf-connecting-ip") || "unknown";
+// A damaged items value must never break a whole page (stats, order list...).
+const parseItems = v => { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
 const listOf = v => String(v || "").split(",").map(s => s.trim()).filter(Boolean);
 
 // Price rules (all in Rs.)
@@ -87,7 +89,7 @@ async function buildStats(env) {
   const days = {}, byProd = {};
   for (const o of orders) {
     if (o.status === "cancelled") { sum.cancelled++; continue; }
-    const items = JSON.parse(o.items);
+    const items = parseItems(o.items);
     const q = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
     sum.orders++; sum.qty += q; sum.revenue += Number(o.total) || 0;
     const k = dayOf(o.created);
@@ -246,11 +248,11 @@ export async function onRequestGet({ request, env }) {
     if (!m) return J({ error: "Please enter a valid order code, like MS-1001." }, 400);
     const row = await env.DB.prepare("SELECT status,items,total,created FROM orders WHERE id=?").bind(Number(m[1]) - 1000).first();
     if (!row) return J({ error: "Order not found. Please check the code." }, 404);
-    return J({ code, status: row.status, items: JSON.parse(row.items), total: row.total, created: row.created });
+    return J({ code, status: row.status, items: parseItems(row.items), total: row.total, created: row.created });
   }
   if (q.has("stats")) return J(await buildStats(env));
   const { results } = await env.DB.prepare("SELECT o.*, p.title AS pay_title FROM orders o LEFT JOIN pay_methods p ON p.id=o.pay_method_id ORDER BY o.id DESC LIMIT 200").all();
-  return J(results.map(o => ({ ...o, code: codeOf(o.id), items: JSON.parse(o.items) })));
+  return J(results.map(o => ({ ...o, code: codeOf(o.id), items: parseItems(o.items) })));
 }
 
 // Admin only: change status and/or edit customer details.
@@ -278,7 +280,7 @@ export async function onRequestPut({ request, env }) {
 
   if (hasStatus) {
     const was = cur.status === "cancelled", will = b.status === "cancelled";
-    const items = JSON.parse(cur.items);
+    const items = parseItems(cur.items);
     if (!was && will) await adjustStock(env, items, +1);   // cancelled: put the stock back
     if (was && !will) {   // un-cancelled: take the stock out again, but only if enough is left
       const { results: prods } = await env.DB.prepare("SELECT id,name,stock FROM products").all();
@@ -311,7 +313,7 @@ export async function onRequestDelete({ request, env }) {
     if (q.get("confirm") !== "RESET") return J({ error: "Type RESET to confirm." }, 400);
     const { results } = await env.DB.prepare("SELECT items,status FROM orders").all();
     const back = [];
-    for (const o of results) if (o.status !== "cancelled" && o.status !== "delivered") back.push(...JSON.parse(o.items));
+    for (const o of results) if (o.status !== "cancelled" && o.status !== "delivered") back.push(...parseItems(o.items));
     await adjustStock(env, back, +1);
     await env.DB.batch([
       env.DB.prepare("DELETE FROM orders"),
@@ -323,7 +325,7 @@ export async function onRequestDelete({ request, env }) {
   const id = Number(q.get("id"));
   const cur = await env.DB.prepare("SELECT status,items FROM orders WHERE id=?").bind(id).first();
   if (!cur) return J({ error: "Order not found" }, 404);
-  if (cur.status !== "cancelled" && cur.status !== "delivered") await adjustStock(env, JSON.parse(cur.items), +1);   // delivered goods already left the shop
+  if (cur.status !== "cancelled" && cur.status !== "delivered") await adjustStock(env, parseItems(cur.items), +1);   // delivered goods already left the shop
   await env.DB.prepare("DELETE FROM orders WHERE id=?").bind(id).run();
   return J({ ok: true });
 }
