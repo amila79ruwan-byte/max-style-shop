@@ -23,6 +23,7 @@ button{background:#111;color:#f3d27a;border:0;font-weight:700;margin-top:8px}
 <h1>Track your order</h1>
 <div class="box">
   <input id="code" placeholder="Order code (e.g. MS-1001)" autocapitalize="characters">
+  <input id="p4" inputmode="numeric" maxlength="4" placeholder="Last 4 digits of your phone number" style="margin-top:8px">
   <button id="go">Check status</button>
   <div class="msg" id="err"></div>
 </div>
@@ -41,7 +42,7 @@ const money=n=>Number(n).toLocaleString("en-US");
 async function check(){
   $("#err").textContent="";
   const code=$("#code").value.trim().toUpperCase();
-  const r=await fetch("/api/orders?code="+encodeURIComponent(code));
+  const r=await fetch("/api/orders?code="+encodeURIComponent(code)+"&p="+encodeURIComponent($("#p4").value.trim()));
   const d=await r.json().catch(()=>({}));
   if(!r.ok){$("#err").textContent=d.error||"Something went wrong. Please try again.";$("#result").style.display="none";return;}
   const idx=STEPS.findIndex(s=>s[0]===d.status);
@@ -54,6 +55,7 @@ async function check(){
   $("#result").style.display="block";
 }
 $("#go").onclick=check;
+$("#p4").addEventListener("keydown",e=>{if(e.key==="Enter")check();});
 $("#code").addEventListener("keydown",e=>{if(e.key==="Enter")check();});
 </script>
 </body>
