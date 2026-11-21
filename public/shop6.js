@@ -33,7 +33,11 @@
         window.open("https://wa.me/"+WHATSAPP+"?text="+encodeURIComponent(text),"_blank");
         st.style.display="block";dn.style.display="block";
       };
-      dn.onclick=()=>{b.slipSent=true;saveMyOrder(b);w.outerHTML=done;};
+      dn.onclick=()=>{
+        b.slipSent=true;saveMyOrder(b);w.outerHTML=done;
+        // tell the shop too, so the admin can see that a slip is on the way
+        fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"slipSent",code:b.code,phone:b.phone1})}).catch(()=>{});
+      };
     });
   }
 
