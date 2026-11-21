@@ -46,13 +46,25 @@ const $=s=>document.querySelector(s);
 let pw=sessionStorage.getItem("pw")||"", products=[];
 const hdr=()=>({"content-type":"application/json","x-admin-password":pw});
 
+// Fits a photo into an exact 3:4 picture (720 x 960). The whole photo is kept (nothing is cut off); the empty space is
+// filled with the photo's own edge colour, so it looks seamless. Transparent areas count as white.
 async function shrink(file){
-  const img=await createImageBitmap(file);
-  const s=Math.min(1,700/Math.max(img.width,img.height));
-  const c=document.createElement("canvas");
-  c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
-  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-  return c.toDataURL("image/jpeg",.8);
+  const W=720,H=960,img=await createImageBitmap(file);
+  const c=document.createElement("canvas");c.width=W;c.height=H;
+  const x=c.getContext("2d");
+  const N=24,t=document.createElement("canvas");t.width=N;t.height=N;
+  const tx=t.getContext("2d");tx.drawImage(img,0,0,N,N);
+  const d=tx.getImageData(0,0,N,N).data;let r=0,g=0,b=0,n=0;
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+    if(i>0&&i<N-1&&j>0&&j<N-1)continue;
+    const k=(j*N+i)*4,a=d[k+3]/255;
+    r+=d[k]*a+255*(1-a);g+=d[k+1]*a+255*(1-a);b+=d[k+2]*a+255*(1-a);n++;
+  }
+  x.fillStyle="rgb("+Math.round(r/n)+","+Math.round(g/n)+","+Math.round(b/n)+")";x.fillRect(0,0,W,H);
+  const s=Math.min(W/img.width,H/img.height),w=Math.round(img.width*s),h=Math.round(img.height*s);
+  x.imageSmoothingQuality="high";
+  x.drawImage(img,Math.round((W-w)/2),Math.round((H-h)/2),w,h);
+  return c.toDataURL("image/jpeg",.82);
 }
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
