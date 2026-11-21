@@ -19,6 +19,12 @@ button.save{width:auto;display:inline-block;padding:10px 14px}
 .msg{font-size:14px;min-height:20px;margin-top:6px}
 .ok{color:#1a7f37}.err{color:#c62828}
 .hint{font-size:12px;color:#666;margin-top:4px}
+.crow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #eee;margin-top:8px}
+.crow img{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#222;border:2px solid #c9a24a;flex:none}
+.crow .ci{flex:1;min-width:0}
+.crow .ci b{display:block;font-size:14px;margin-bottom:4px}
+.crow input[type=file]{font-size:13px;padding:6px;margin:0}
+.crow button{width:auto;padding:8px 12px;font-size:14px;margin:4px 6px 0 0}
 .thumb{width:100%;aspect-ratio:16/7;object-fit:cover;border-radius:8px;background:#eee;display:block;margin-bottom:6px}
 </style>
 </head>
@@ -49,6 +55,12 @@ button.save{width:auto;display:inline-block;padding:10px 14px}
     <div class="msg" id="amsg"></div>
   </div>
   <div id="list"></div>
+
+  <div class="box">
+    <b>Category circle photos</b>
+    <div class="hint">The round buttons under the banner. Upload a photo for each one. Without a photo it uses the first product photo of that category.</div>
+    <div id="circs"></div>
+  </div>
 </div>
 
 <script>
@@ -63,7 +75,7 @@ async function check() {
   const r = await fetch("/api/banners", { method: "POST", headers: hdr(), body: "{}" });
   return r.status !== 401;
 }
-function show() { $("#login").style.display = "none"; $("#panel").style.display = "block"; load(); }
+function show() { $("#login").style.display = "none"; $("#panel").style.display = "block"; load(); loadCircs(); }
 
 async function shrink(file) {
   const img = await createImageBitmap(file);
@@ -136,6 +148,41 @@ $("#add").onclick = async () => {
   msg.className = "msg ok"; msg.textContent = "Added ✓";
   load();
 };
+
+// ---- Category circle photos ----
+const CIRCS = [["dresses", "Dresses"], ["phone", "Phone"], ["school", "School"], ["bags", "Bags"]];
+async function cropSquare(file) {
+  const img = await createImageBitmap(file);
+  const s = Math.min(img.width, img.height);
+  const c = document.createElement("canvas");
+  c.width = c.height = Math.min(400, s);
+  c.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+async function loadCircs() {
+  const r = await fetch("/api/circles");
+  const m = r.ok ? await r.json() : {};
+  $("#circs").innerHTML = CIRCS.map(([k, n]) => `<div class="crow" data-k="${k}">
+      <img src="${m[k] || "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="}" alt="">
+      <div class="ci"><b>${n}</b><input type="file" accept="image/*" data-up="${k}">
+      ${m[k] ? `<button class="del" data-rm="${k}">Remove</button>` : ""}<div class="msg" data-cm="${k}"></div></div></div>`).join("");
+}
+$("#circs").addEventListener("change", async e => {
+  const k = e.target.dataset.up, f = e.target.files[0];
+  if (!k || !f) return;
+  const msg = document.querySelector(`[data-cm="${k}"]`);
+  msg.className = "msg"; msg.textContent = "Uploading…";
+  const r = await fetch("/api/circles", { method: "POST", headers: hdr(), body: JSON.stringify({ key: k, image: await cropSquare(f) }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { msg.className = "msg err"; msg.textContent = d.error || "Could not upload"; return; }
+  loadCircs();
+});
+$("#circs").addEventListener("click", async e => {
+  const k = e.target.dataset.rm;
+  if (!k || !confirm("Remove this photo?")) return;
+  await fetch("/api/circles?key=" + k, { method: "DELETE", headers: hdr() });
+  loadCircs();
+});
 
 $("#go").onclick = async () => {
   pw = $("#pw").value;
