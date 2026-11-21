@@ -1,12 +1,19 @@
 // ---- Category circles: a product photo of that category inside each circle (name is under the circle) ----
+let CIRC_IMG=null;   // photos uploaded in banners.html (Category circle photos), loaded once
 function renderCircs(){
-  $$(".circs button").forEach(b=>{
-    const c=b.dataset.circ||b.dataset.cat;
-    const cats=c==="dresses"?DRESS_CATS.map(x=>x[0]):[c];
-    const p=PRODUCTS.find(x=>x.image&&(c==="all"||cats.includes(x.cat)));
-    const cp=b.querySelector(".cp");
-    if(p&&cp)cp.style.backgroundImage='url("'+p.image+'")';
+  const apply=m=>$$(".circs button").forEach(b=>{
+    const c=b.dataset.circ||b.dataset.cat,cp=b.querySelector(".cp");if(!cp)return;
+    let src=m[c];   // an uploaded photo wins; otherwise the first product photo of that category
+    if(!src){
+      const cats=c==="dresses"?DRESS_CATS.map(x=>x[0]):[c];
+      const p=PRODUCTS.find(x=>x.image&&(c==="all"||cats.includes(x.cat)));
+      if(p)src=p.image;
+    }
+    if(src)cp.style.backgroundImage='url("'+src+'")';
   });
+  if(CIRC_IMG){apply(CIRC_IMG);return;}
+  apply({});
+  fetch("/api/circles").then(r=>r.ok?r.json():{}).catch(()=>({})).then(m=>{CIRC_IMG=m&&typeof m==="object"?m:{};apply(CIRC_IMG);});
 }
 
 // ---- Flash deals: offer products run across the page; the Flash sale circle + strip show only when there are offers ----
