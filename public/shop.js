@@ -153,6 +153,8 @@ function renderGrid(){
 }
 function toggleWish(id){wish.has(id)?wish.delete(id):wish.add(id);saveWish();$("#wcnt").textContent=wish.size;renderGrid();}
 function chg(k,d){cart[k]=(cart[k]||0)+d;if(cart[k]<=0)delete cart[k];renderCart();}
+// One click listener for the cart +/- buttons (the cart key is read from a data attribute, never from inline JavaScript).
+$("#items").addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(b)chg(b.dataset.k,Number(b.dataset.d));});
 function keys(){return Object.keys(cart).filter(k=>prodOf(k));}
 function renderCart(){
   const ks=keys();let total=0,n=0;
@@ -161,7 +163,7 @@ function renderCart(){
     total+=p.price*cart[k];n+=cart[k];
     const opts=[size?"Size: "+size:"",color?"Color: "+color:""].filter(Boolean).join(" · ");
     const thumb=p.image?'<img src="'+p.image+'" alt="" style="width:52px;height:64px;object-fit:cover;border-radius:6px;flex:none">':'';
-    return '<div class="row">'+thumb+'<span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button onclick="chg(\''+k+'\',-1)" aria-label="Remove one">−</button>'+cart[k]+'<button onclick="chg(\''+k+'\',1)" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
+    return '<div class="row">'+thumb+'<span>'+esc(p.name)+(opts?"<small>"+esc(opts)+"</small>":"")+'</span><span class="qty"><button data-k="'+esc(k)+'" data-d="-1" aria-label="Remove one">−</button>'+cart[k]+'<button data-k="'+esc(k)+'" data-d="1" aria-label="Add one">+</button></span><b>Rs. '+fmt(p.price*cart[k])+"</b></div>";
   }).join(""):'<p class="note">Your cart is empty. Add something from the collection.</p>';
   $("#total").textContent=fmt(total);updateSummary();$("#cnt").textContent=n;
   saveCart();
