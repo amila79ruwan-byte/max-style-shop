@@ -104,6 +104,31 @@ function ckPayBox(d){
     +'⏰ <b>'+esc(when)+'</b> (ශ්‍රී ලංකා වේලාව) ට පෙර ගෙවීම් slip එක එවන්න: menu → <b>My orders / Bills</b> → මේ order එක → slip upload. පැය 24ක් ඇතුළත slip නොලැබුණොත් order එක ස්වයංක්‍රීයව cancel වෙනවා.</div>';
 }
 
+// ---- Cloudflare Turnstile bot check (off until TURNSTILE_SITEKEY is set in Cloudflare Pages) ----
+let tsCfg=null;
+async function tsSiteKey(){
+  if(tsCfg!==null)return tsCfg;
+  try{const r=await fetch("/api/orders?turnstile=1");const d=await r.json();tsCfg=d.sitekey||"";}catch(e){tsCfg="";}
+  return tsCfg;
+}
+function tsLoad(){
+  if(window.turnstile)return Promise.resolve();
+  return new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";s.async=true;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+}
+async function tsToken(){
+  const key=await tsSiteKey();if(!key)return "";
+  try{await tsLoad();}catch(e){return "";}
+  return new Promise(resolve=>{
+    const box=document.createElement("div");
+    box.style.cssText="position:fixed;left:0;right:0;bottom:100px;display:flex;justify-content:center;z-index:99999";
+    document.body.appendChild(box);
+    let done=false,id=null;
+    const fin=t=>{if(done)return;done=true;try{window.turnstile.remove(id);}catch(e){}box.remove();resolve(t||"");};
+    id=window.turnstile.render(box,{sitekey:key,appearance:"interaction-only",callback:fin,"error-callback":()=>fin(""),"timeout-callback":()=>fin("")});
+    setTimeout(()=>fin(""),30000);
+  });
+}
+
 // Place the order (button on the payment page)
 async function ckPlaceOrder(){
   const f=ckForm(),m=$("#ckErr"),btn=$("#ckPlace"),ks=keys();
@@ -113,8 +138,9 @@ async function ckPlaceOrder(){
   m.style.color="#1a7f37";m.textContent="Placing your order…";btn.disabled=true;
   const items=ks.map(k=>{const {id,size,color}=parseKey(k);return {id,size,color,qty:cart[k]};});
   let d={};
+  const cf=await tsToken();
   try{
-    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:f.name,phone1:f.phone,phone2:f.phone2,district:f.district,address:f.addr,items,token:getTok(),
+    const r=await fetch("/api/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({cf,name:f.name,phone1:f.phone,phone2:f.phone2,district:f.district,address:f.addr,items,token:getTok(),
       payment:ck.pay,payMethodId:ck.pm,gift:ck.gift,giftMsg:f.gm,giftWrap:ck.wrap,hideSender:ck.hide,senderName:f.sn,senderPhone:f.sp})});
     d=await r.json();
     if(!r.ok){btn.disabled=false;m.style.color="#c62828";m.textContent=d.error||"Could not place order. Please try again.";return;}
