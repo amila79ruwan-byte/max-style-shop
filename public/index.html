@@ -223,13 +223,17 @@
     <div id="addrCard" style="display:none"></div>
     <!-- Delivery form: name, district, city, address, postal code (optional), phone, alternate phone (optional) -->
     <input id="name" placeholder="Name" autocomplete="name">
-    <select id="district" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px"><option value="">Select district</option><option>Colombo</option><option>Gampaha</option><option>Kalutara</option><option>Kandy</option><option>Matale</option><option>Nuwara Eliya</option><option>Galle</option><option>Matara</option><option>Hambantota</option><option>Jaffna</option><option>Kilinochchi</option><option>Mannar</option><option>Vavuniya</option><option>Mullaitivu</option><option>Batticaloa</option><option>Ampara</option><option>Trincomalee</option><option>Kurunegala</option><option>Puttalam</option><option>Anuradhapura</option><option>Polonnaruwa</option><option>Badulla</option><option>Monaragala</option><option>Ratnapura</option><option>Kegalle</option></select>
-    <select id="city" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;font:inherit;font-size:15px"><option value="">Select city</option></select>
+    <div class="frow" id="rowDC">
+      <select id="district" ><option value="">Select district</option><option>Colombo</option><option>Gampaha</option><option>Kalutara</option><option>Kandy</option><option>Matale</option><option>Nuwara Eliya</option><option>Galle</option><option>Matara</option><option>Hambantota</option><option>Jaffna</option><option>Kilinochchi</option><option>Mannar</option><option>Vavuniya</option><option>Mullaitivu</option><option>Batticaloa</option><option>Ampara</option><option>Trincomalee</option><option>Kurunegala</option><option>Puttalam</option><option>Anuradhapura</option><option>Polonnaruwa</option><option>Badulla</option><option>Monaragala</option><option>Ratnapura</option><option>Kegalle</option></select>
+      <select id="city"><option value="">Select city</option></select>
+    </div>
     <input id="cityOther" placeholder="Type your city" style="display:none">
-    <textarea id="addr" rows="3" placeholder="Address"></textarea>
-    <input id="postal" placeholder="Postal code (optional)" inputmode="numeric" maxlength="10">
-    <input id="phone" placeholder="Phone number (WhatsApp)" inputmode="tel" autocomplete="tel">
-    <input id="phone2" placeholder="Alternate phone number (optional)" inputmode="tel" autocomplete="tel">
+    <textarea id="addr" rows="2" placeholder="Address"></textarea>
+    <div class="frow" id="rowPP">
+      <input id="postal" placeholder="Postal code (optional)" inputmode="numeric" maxlength="10">
+      <input id="phone" placeholder="Phone (WhatsApp)" inputmode="tel" autocomplete="tel">
+    </div>
+    <input id="phone2" placeholder="Alternate phone (optional)" inputmode="tel">
     <div class="tot" style="margin-top:6px"><span>Total (Cash on delivery)</span><span>Rs. <span id="total2">0</span></span></div>
     <div id="sumBox" style="margin:10px 0;font-size:15px"></div>
     <div class="firstNote" style="display:none;font-size:13px;font-weight:600;margin-bottom:8px"></div>
@@ -247,6 +251,15 @@
 <script src="shop5.js"></script>
 <script src="account.js"></script>
 <script src="shop6.js"></script>
+<style>
+/* compact delivery form: fits the phone screen */
+#checkout .frow{display:flex;gap:8px;margin:0 0 8px}
+#checkout .frow>*{flex:1 1 0;min-width:0;margin:0!important}
+#checkout .co input,#checkout .co textarea,#checkout .co select{padding:10px 12px!important;margin-bottom:8px!important;font-size:14px!important;border:1.5px solid #e6e0cf;border-radius:10px;background:#faf8f3;width:100%;font-family:inherit}
+#checkout .frow select,#checkout .frow input{margin-bottom:0!important;height:44px;box-sizing:border-box}
+#checkout #district,#checkout #city{padding:0 10px!important;height:44px!important;line-height:normal!important;margin-bottom:0!important;box-sizing:border-box}
+#checkout .co textarea{min-height:0}
+</style>
 <script src="checkout-form.js"></script>
 
 <!-- Hide the 10% sign in strip when the customer is already signed in -->
