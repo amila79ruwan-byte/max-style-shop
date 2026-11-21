@@ -1,3 +1,4 @@
+import { readJson } from "../_lib/json.js";
 import { expireUnpaid, SLIP_HOURS } from "../_lib/expire.js";
 import { hit } from "../_lib/ratelimit.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
@@ -117,7 +118,8 @@ async function buildStats(env) {
 
 export async function onRequestPost({ request, env }) {
   await expireUnpaid(env);   // free the stock of unpaid orders first
-  const b = await request.json();
+  const b = await readJson(request);
+  if (!b) return J({ error: "Bad request" }, 400);
   // Customer says "I sent the slip": order code + phone must match. Only moves awaiting -> slip_sent.
   if (b.action === "slipSent") {
     const m = String(b.code || "").trim().toUpperCase().match(/^MS-(\d+)$/);
@@ -283,7 +285,8 @@ export async function onRequestGet({ request, env }) {
 // Admin only: change status and/or edit customer details.
 export async function onRequestPut({ request, env }) {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
-  const b = await request.json();
+  const b = await readJson(request);
+  if (!b) return J({ error: "Bad request" }, 400);
   const id = Number(b.id);
   const cur = await env.DB.prepare("SELECT status,items FROM orders WHERE id=?").bind(id).first();
   if (!cur) return J({ error: "Order not found" }, 404);
