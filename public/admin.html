@@ -338,6 +338,12 @@ const dayLabel=t=>{
   return (k===today?"Today · ":k===yest?"Yesterday · ":"")+txt;
 };
 
+// Payment method text for an order card (old orders without a payment value count as cash on delivery)
+function payLine(o){
+  const p=o.payment||"cod";
+  if(p==="cod")return "Cash on delivery";
+  return (p==="bank"?"Bank Deposit":"Online Transfer")+(o.pay_title?" · "+o.pay_title:"")+(o.pay_state==="awaiting"?" · Slip pending":"");
+}
 async function loadOrders(){
   const r=await fetch("/api/orders",{headers:hdr()});
   if(!r.ok){$("#olist").innerHTML='<p class="msg">Could not load orders.</p>';return;}
@@ -370,6 +376,7 @@ async function loadOrders(){
       <div><b>${esc(o.name)}</b> · ${esc(o.district)}</div>
       <div class="muted">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}</div>
       <div class="muted">${esc(o.address)}</div>
+      <div style="margin:6px 0"><span style="display:inline-block;background:${(o.payment||"cod")==="cod"?"#eee":"#fdf5d8"};border-radius:999px;padding:3px 11px;font-size:13px;font-weight:600">${esc(payLine(o))}</span></div>
       <ul>${o.items.map(i=>{const c=itemCode(i);return `<li>${c?'<span class="icode">'+c+'</span>':''}${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?" ["+esc(i.color)+"]":""} x${i.qty}</li>`;}).join("")}</ul>
       <div class="orow"><b>Rs. ${money(o.total)}</b>
         <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select>
