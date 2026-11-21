@@ -344,6 +344,18 @@ function payLine(o){
   if(p==="cod")return "Cash on delivery";
   return (p==="bank"?"Bank Deposit":"Online Transfer")+(o.pay_title?" · "+o.pay_title:"")+(o.pay_state==="awaiting"?" · Slip pending":"");
 }
+// Gift box for an order card: who sent it, the message, wrapping, and whether the sender's name must stay hidden.
+// For a gift, the name / phone / address on the card are the RECEIVER's.
+function giftHtml(o){
+  if(!o.is_gift)return "";
+  return `<div style="background:#fff8e1;border:1px solid #e6d9a8;border-radius:10px;padding:9px 11px;margin:6px 0;font-size:13px;line-height:1.5">
+    <b>🎁 GIFT</b> <span class="muted">(name, phone and address above = receiver)</span><br>
+    <b>Sender:</b> ${esc(o.sender_name||"-")}${o.sender_phone?" · "+esc(o.sender_phone):""}<br>
+    ${o.hide_sender?'<b style="color:#c62828">Hide sender name from the receiver</b><br>':""}
+    <b>Gift wrap:</b> ${Number(o.gift_wrap)>0?"Yes (Rs. "+money(o.gift_wrap)+")":"No"}
+    ${o.gift_msg?'<br><b>Message:</b> “'+esc(o.gift_msg)+'”':""}
+  </div>`;
+}
 async function loadOrders(){
   const r=await fetch("/api/orders",{headers:hdr()});
   if(!r.ok){$("#olist").innerHTML='<p class="msg">Could not load orders.</p>';return;}
@@ -377,6 +389,7 @@ async function loadOrders(){
       <div class="muted">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}</div>
       <div class="muted">${esc(o.address)}</div>
       <div style="margin:6px 0"><span style="display:inline-block;background:${(o.payment||"cod")==="cod"?"#eee":"#fdf5d8"};border-radius:999px;padding:3px 11px;font-size:13px;font-weight:600">${esc(payLine(o))}</span></div>
+      ${giftHtml(o)}
       <ul>${o.items.map(i=>{const c=itemCode(i);return `<li>${c?'<span class="icode">'+c+'</span>':''}${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?" ["+esc(i.color)+"]":""} x${i.qty}</li>`;}).join("")}</ul>
       <div class="orow"><b>Rs. ${money(o.total)}</b>
         <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select>
