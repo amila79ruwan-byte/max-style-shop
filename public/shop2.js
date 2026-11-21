@@ -18,7 +18,7 @@ function openDressSheet(){
 }
 $$("[data-circ]").forEach(e=>e.addEventListener("click",()=>{
   const c=e.dataset.circ;
-  if(c==="dresses")openDressSheet();else setCat(c);
+  if(c==="dresses")openDressSheet();else if(c==="flash")setCat("offers");else setCat(c);
 }));
 
 let firstFlag=null,firstFor="";
