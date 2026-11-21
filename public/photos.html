@@ -43,6 +43,7 @@ button.del{background:#c62828;color:#fff;width:auto;padding:6px 10px;margin:0;fo
 
 <script>
 const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let pw=sessionStorage.getItem("pw")||"", products=[];
 const hdr=()=>({"content-type":"application/json","x-admin-password":pw});
 
@@ -73,7 +74,7 @@ async function login(){
 }
 async function loadProducts(){
   products=await (await fetch("/api/products")).json();
-  $("#prod").innerHTML=products.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
+  $("#prod").innerHTML=products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   await loadPhotos();
 }
 async function loadPhotos(){
