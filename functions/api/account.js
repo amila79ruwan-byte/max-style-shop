@@ -40,9 +40,20 @@ async function clearFails(env, k) {
   await env.DB.prepare("DELETE FROM login_attempts WHERE k=?").bind(k).run();
 }
 
+// Login lasts 30 days. Every time the customer uses the site, the time is extended again
+// (when less than half is left), so someone who keeps using the shop stays signed in.
+const TOKEN_MS = 30 * 24 * 3600 * 1000;
 async function me(env, tok) {
   if (!tok) return null;
-  return await env.DB.prepare("SELECT id,phone,name,phone2,district,address FROM customers WHERE token=?").bind(tok).first();
+  const row = await env.DB.prepare("SELECT id,phone,name,phone2,district,address,token_exp FROM customers WHERE token=?").bind(tok).first();
+  if (!row) return null;
+  const now = Date.now(), exp = row.token_exp || 0;
+  delete row.token_exp;
+  if (exp && exp < now) return null;                         // expired: the customer must sign in again
+  if (!exp || exp - now < TOKEN_MS / 2) {
+    await env.DB.prepare("UPDATE customers SET token_exp=? WHERE id=?").bind(now + TOKEN_MS, row.id).run();
+  }
+  return row;
 }
 
 // Saved addresses of one customer (default first).
@@ -117,8 +128,8 @@ export async function onRequestPost({ request, env }) {
       const name = String(b.name || "").trim();
       if (!name) return J({ error: "Enter your name" }, 400);
       await env.DB.prepare(
-        "INSERT INTO customers (phone,name,phone2,district,address,pin_hash,token,created) VALUES (?,?,?,?,?,?,?,?)"
-      ).bind(phone, name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), ph, tok, Date.now()).run();
+        "INSERT INTO customers (phone,name,phone2,district,address,pin_hash,token,token_exp,created) VALUES (?,?,?,?,?,?,?,?,?)"
+      ).bind(phone, name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), ph, tok, Date.now() + TOKEN_MS, Date.now()).run();
     } else {
       if (!row || row.pin_hash !== ph) {
         await addFail(env, pKey, PHONE_MAX_FAILS);
@@ -126,7 +137,7 @@ export async function onRequestPost({ request, env }) {
         return J({ error: "Wrong phone number or PIN" }, 401);
       }
       await clearFails(env, pKey);
-      await env.DB.prepare("UPDATE customers SET token=? WHERE id=?").bind(tok, row.id).run();
+      await env.DB.prepare("UPDATE customers SET token=?, token_exp=? WHERE id=?").bind(tok, Date.now() + TOKEN_MS, row.id).run();
     }
     return J({ ok: true, token: tok });
   }
