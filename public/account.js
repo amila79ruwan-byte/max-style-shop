@@ -108,6 +108,7 @@ function setField(id, val) {
 // Put one saved address into the checkout form.
 function applyAddr(a) {
   if (!a) return;
+  if (window.msApplyAddr) return window.msApplyAddr(a);
   setField("name", a.name); setField("phone", a.phone); setField("phone2", a.phone2);
   setField("district", a.district); setField("addr", addrLine(a));
 }
@@ -135,6 +136,7 @@ function refreshPicker() {
 // Fill the checkout form with the default saved address (only when the form is empty).
 function fillCheckout() {
   refreshPicker();
+  if (window.msFill) return window.msFill();
   if (!P) return;
   const nm = document.getElementById("name");
   if (!nm || nm.value) return;
@@ -420,4 +422,5 @@ if (accBtn) accBtn.addEventListener("click", openAccount);
 const nextBtn = document.getElementById("toCheckout");
 if (nextBtn) nextBtn.addEventListener("click", () => setTimeout(fillCheckout, 0));
 loadProfile().then(fillCheckout);
+window.MSAcc = { CITIES: CITIES, getP: () => P, defAddr: () => defAddr(), getTok: getTok };
 })();
