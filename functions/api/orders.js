@@ -256,7 +256,16 @@ export async function onRequestPut({ request, env }) {
     const was = cur.status === "cancelled", will = b.status === "cancelled";
     const items = JSON.parse(cur.items);
     if (!was && will) await adjustStock(env, items, +1);   // cancelled: put the stock back
-    if (was && !will) await adjustStock(env, items, -1);   // un-cancelled: take the stock out again
+    if (was && !will) {   // un-cancelled: take the stock out again, but only if enough is left
+      const { results: prods } = await env.DB.prepare("SELECT id,name,stock FROM products").all();
+      const need = {};
+      for (const it of items) {
+        const pr = prods.find(x => (it.id ? x.id == it.id : x.name === it.name));
+        if (pr) need[pr.id] = (need[pr.id] || 0) + (Number(it.qty) || 0);
+      }
+      const rs = await reserveStock(env, need, prods);
+      if (!rs.ok) return J({ error: "Cannot restore this order: " + rs.error }, 400);
+    }
     await env.DB.prepare("UPDATE orders SET status=? WHERE id=?").bind(b.status, id).run();
   }
   if (det) {
@@ -275,7 +284,7 @@ export async function onRequestDelete({ request, env }) {
     if (q.get("confirm") !== "RESET") return J({ error: "Type RESET to confirm." }, 400);
     const { results } = await env.DB.prepare("SELECT items,status FROM orders").all();
     const back = [];
-    for (const o of results) if (o.status !== "cancelled") back.push(...JSON.parse(o.items));
+    for (const o of results) if (o.status !== "cancelled" && o.status !== "delivered") back.push(...JSON.parse(o.items));
     await adjustStock(env, back, +1);
     await env.DB.batch([
       env.DB.prepare("DELETE FROM orders"),
@@ -287,7 +296,7 @@ export async function onRequestDelete({ request, env }) {
   const id = Number(q.get("id"));
   const cur = await env.DB.prepare("SELECT status,items FROM orders WHERE id=?").bind(id).first();
   if (!cur) return J({ error: "Order not found" }, 404);
-  if (cur.status !== "cancelled") await adjustStock(env, JSON.parse(cur.items), +1);
+  if (cur.status !== "cancelled" && cur.status !== "delivered") await adjustStock(env, JSON.parse(cur.items), +1);   // delivered goods already left the shop
   await env.DB.prepare("DELETE FROM orders WHERE id=?").bind(id).run();
   return J({ ok: true });
 }
