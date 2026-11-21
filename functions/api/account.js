@@ -9,6 +9,37 @@ const MAX_ADDR = 10;
 async function hashPin(phone, pin) {
   return hex(await crypto.subtle.digest("SHA-256", enc.encode("maxstyle:" + phone + ":" + pin)));
 }
+// ---- Login rate limit: stops PIN guessing. Counters live in the login_attempts table (see migrate_login_attempts.sql). ----
+const PHONE_MAX_FAILS = 5;     // wrong PINs allowed for one phone number
+const IP_MAX_FAILS = 20;       // wrong attempts allowed from one IP address
+const LOCK_MS = 15 * 60 * 1000; // lock time: 15 minutes
+const FORGET_MS = 60 * 60 * 1000; // old failed attempts are forgotten after 1 hour
+const clientIp = req => req.headers.get("cf-connecting-ip") || "unknown";
+const tooMany = until => J({ error: "Too many wrong attempts. Try again in " + Math.max(1, Math.ceil((until - Date.now()) / 60000)) + " minutes." }, 429);
+
+// Returns the time (ms) until which any of these keys is locked, or 0 if none.
+async function lockedUntil(env, keys) {
+  const now = Date.now();
+  let until = 0;
+  for (const k of keys) {
+    const r = await env.DB.prepare("SELECT locked_until FROM login_attempts WHERE k=?").bind(k).first();
+    if (r && r.locked_until > now && r.locked_until > until) until = r.locked_until;
+  }
+  return until;
+}
+async function addFail(env, k, max) {
+  const now = Date.now();
+  const r = await env.DB.prepare("SELECT n,locked_until,updated FROM login_attempts WHERE k=?").bind(k).first();
+  let n = r ? r.n : 0;
+  if (r && ((r.locked_until && r.locked_until <= now) || now - r.updated > FORGET_MS)) n = 0;   // lock ended or very old: start again
+  n++;
+  await env.DB.prepare("INSERT INTO login_attempts (k,n,locked_until,updated) VALUES (?,?,?,?) ON CONFLICT(k) DO UPDATE SET n=excluded.n, locked_until=excluded.locked_until, updated=excluded.updated")
+    .bind(k, n, n >= max ? now + LOCK_MS : 0, now).run();
+}
+async function clearFails(env, k) {
+  await env.DB.prepare("DELETE FROM login_attempts WHERE k=?").bind(k).run();
+}
+
 async function me(env, tok) {
   if (!tok) return null;
   return await env.DB.prepare("SELECT id,phone,name,phone2,district,address FROM customers WHERE token=?").bind(tok).first();
@@ -52,7 +83,14 @@ export async function onRequestPost({ request, env }) {
 
   // Admin: reset a customer's PIN (used from the PIN reset page).
   if (act === "adminReset") {
-    if (!env.ADMIN_PASSWORD || request.headers.get("x-admin-password") !== env.ADMIN_PASSWORD) return J({ error: "Wrong password" }, 401);
+    const aKey = "admin:" + clientIp(request);
+    const aLock = await lockedUntil(env, [aKey]);
+    if (aLock) return tooMany(aLock);
+    if (!env.ADMIN_PASSWORD || request.headers.get("x-admin-password") !== env.ADMIN_PASSWORD) {
+      await addFail(env, aKey, PHONE_MAX_FAILS);
+      return J({ error: "Wrong password" }, 401);
+    }
+    await clearFails(env, aKey);
     const phone = normPhone(b.phone), pin = String(b.new_pin || "");
     if (phone.length < 9) return J({ error: "Enter a valid phone number" }, 400);
     if (!/^\d{4}$/.test(pin)) return J({ error: "New PIN must be 4 digits" }, 400);
@@ -67,6 +105,11 @@ export async function onRequestPost({ request, env }) {
     if (phone.length < 9) return J({ error: "Enter a valid phone number" }, 400);
     if (!/^\d{4}$/.test(pin)) return J({ error: "PIN must be 4 digits" }, 400);
     const ph = await hashPin(phone, pin);
+    const pKey = "phone:" + phone, iKey = "ip:" + clientIp(request);
+    if (act === "login") {
+      const lock = await lockedUntil(env, [pKey, iKey]);
+      if (lock) return tooMany(lock);
+    }
     const row = await env.DB.prepare("SELECT id,pin_hash FROM customers WHERE phone=?").bind(phone).first();
     const tok = newToken();
     if (act === "signup") {
@@ -77,7 +120,12 @@ export async function onRequestPost({ request, env }) {
         "INSERT INTO customers (phone,name,phone2,district,address,pin_hash,token,created) VALUES (?,?,?,?,?,?,?,?)"
       ).bind(phone, name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), ph, tok, Date.now()).run();
     } else {
-      if (!row || row.pin_hash !== ph) return J({ error: "Wrong phone number or PIN" }, 401);
+      if (!row || row.pin_hash !== ph) {
+        await addFail(env, pKey, PHONE_MAX_FAILS);
+        await addFail(env, iKey, IP_MAX_FAILS);
+        return J({ error: "Wrong phone number or PIN" }, 401);
+      }
+      await clearFails(env, pKey);
       await env.DB.prepare("UPDATE customers SET token=? WHERE id=?").bind(tok, row.id).run();
     }
     return J({ ok: true, token: tok });
@@ -169,8 +217,15 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (act === "pin") {
+    const pKey = "phone:" + p.phone;
+    const lock = await lockedUntil(env, [pKey]);
+    if (lock) return tooMany(lock);
     const row = await env.DB.prepare("SELECT pin_hash FROM customers WHERE id=?").bind(p.id).first();
-    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.old_pin || ""))) return J({ error: "Current PIN is wrong" }, 401);
+    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.old_pin || ""))) {
+      await addFail(env, pKey, PHONE_MAX_FAILS);
+      return J({ error: "Current PIN is wrong" }, 401);
+    }
+    await clearFails(env, pKey);
     const np = String(b.new_pin || "");
     if (!/^\d{4}$/.test(np)) return J({ error: "New PIN must be 4 digits" }, 400);
     await env.DB.prepare("UPDATE customers SET pin_hash=? WHERE id=?").bind(await hashPin(p.phone, np), p.id).run();
@@ -180,8 +235,15 @@ export async function onRequestPost({ request, env }) {
   // Delete the account (needs the PIN). Saved addresses are deleted too. Orders are kept, so a new account
   // made later does not get the first order discount again.
   if (act === "deleteAccount") {
+    const pKey = "phone:" + p.phone;
+    const lock = await lockedUntil(env, [pKey]);
+    if (lock) return tooMany(lock);
     const row = await env.DB.prepare("SELECT pin_hash FROM customers WHERE id=?").bind(p.id).first();
-    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.pin || ""))) return J({ error: "PIN is wrong" }, 401);
+    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.pin || ""))) {
+      await addFail(env, pKey, PHONE_MAX_FAILS);
+      return J({ error: "PIN is wrong" }, 401);
+    }
+    await clearFails(env, pKey);
     await env.DB.batch([
       env.DB.prepare("DELETE FROM addresses WHERE customer_id=?").bind(p.id),
       env.DB.prepare("DELETE FROM customers WHERE id=?").bind(p.id)
