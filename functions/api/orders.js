@@ -53,6 +53,28 @@ async function adjustStock(env, items, sign) {
   if (st.length) await env.DB.batch(st);
 }
 
+// Takes the stock out for a new order in one safe step per product: the UPDATE only works when enough is left,
+// so two orders at the same moment can never take the same last item. Products with no stock number (NULL) are skipped.
+// Returns { ok:true, taken } or { ok:false, error } (and puts back anything it already took).
+async function reserveStock(env, need, products) {
+  const taken = [];
+  for (const id in need) {
+    const p = products.find(x => x.id == id);
+    if (!p || p.stock === null || p.stock === undefined) continue;   // not tracked
+    const r = await env.DB.prepare("UPDATE products SET stock=stock-? WHERE id=? AND stock IS NOT NULL AND stock>=?").bind(need[id], id, need[id]).run();
+    if (r.meta && r.meta.changes > 0) { taken.push({ id, qty: need[id] }); continue; }
+    await releaseStock(env, taken);
+    const now = await env.DB.prepare("SELECT stock FROM products WHERE id=?").bind(id).first();
+    const left = now && now.stock !== null && now.stock !== undefined ? now.stock : 0;
+    return { ok: false, error: left <= 0 ? p.name + " is sold out." : "Only " + left + " left of " + p.name + "." };
+  }
+  return { ok: true, taken };
+}
+async function releaseStock(env, taken) {
+  if (!taken || !taken.length) return;
+  await env.DB.batch(taken.map(t => env.DB.prepare("UPDATE products SET stock=stock+? WHERE id=? AND stock IS NOT NULL").bind(t.qty, t.id)));
+}
+
 // Admin stats: totals, per day (Sri Lanka time, day changes at 00:00) and per product. Cancelled orders are not counted.
 async function buildStats(env) {
   const { results: orders } = await env.DB.prepare("SELECT id,items,total,status,created FROM orders").all();
@@ -150,12 +172,21 @@ export async function onRequestPost({ request, env }) {
   const payState = payment === "cod" ? "none" : "awaiting";   // awaiting = waiting for the payment slip
   const now = Date.now();
 
+  // Take the stock first (safe against two orders at the same moment). If anything fails after this, it is put back.
+  const res = await reserveStock(env, need, products);
+  if (!res.ok) return J({ error: res.error }, 400);
+
   const cols = "name,phone1,phone2,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee,is_gift,gift_wrap,gift_msg,sender_name,sender_phone,hide_sender,pay_state,pay_method_id";
-  const r = await env.DB.prepare(
+  let r;
+  try {
+  r = await env.DB.prepare(
     "INSERT INTO orders (" + cols + ") VALUES (" + cols.split(",").map(() => "?").join(",") + ")"
   ).bind(name, phone1, phone2, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
     isGift ? 1 : 0, giftWrap, giftMsg, senderName, senderPhone, isGift && b.hideSender ? 1 : 0, payState, pm ? pm.id : 0).run();
-  await adjustStock(env, lines, -1);
+  } catch (e) {
+    await releaseStock(env, res.taken);   // the order could not be saved: put the stock back
+    return J({ error: "Could not place the order. Please try again." }, 500);
+  }
   return J({ ok: true, code: codeOf(r.meta.last_row_id), subtotal, discount, delivery, codFee, giftWrap, total, lines, payState,
     payTitle: pm ? pm.title : "", payDetails: pm ? pm.details : "", deadline: payState === "awaiting" ? now + SLIP_HOURS * 3600000 : 0 });
 }
