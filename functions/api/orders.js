@@ -115,6 +115,15 @@ async function buildStats(env) {
 export async function onRequestPost({ request, env }) {
   await expireUnpaid(env);   // free the stock of unpaid orders first
   const b = await request.json();
+  // Customer says "I sent the slip": order code + phone must match. Only moves awaiting -> slip_sent.
+  if (b.action === "slipSent") {
+    const m = String(b.code || "").trim().toUpperCase().match(/^MS-(\d+)$/);
+    const pn = last9(b.phone);
+    if (!m || pn.length !== 9) return J({ error: "Invalid details" }, 400);
+    const r = await env.DB.prepare("UPDATE orders SET pay_state='slip_sent' WHERE id=? AND phone_norm=? AND pay_state='awaiting'")
+      .bind(Number(m[1]) - 1000, pn).run();
+    return J({ ok: true, changed: !!(r.meta && r.meta.changes > 0) });
+  }
   // Bot check (Cloudflare Turnstile). Only active when the TURNSTILE_SECRET variable is set in Cloudflare Pages.
   if (env.TURNSTILE_SECRET) {
     const tok = String(b.cf || "");
@@ -254,7 +263,9 @@ export async function onRequestPut({ request, env }) {
 
   const hasStatus = "status" in b;
   const hasDetails = "name" in b;
+  const hasPay = "pay_state" in b;
   if (hasStatus && !STATUSES.includes(b.status)) return J({ error: "Invalid status" }, 400);
+  if (hasPay && !["awaiting", "slip_sent", "paid"].includes(b.pay_state)) return J({ error: "Invalid payment state" }, 400);
 
   let det = null;
   if (hasDetails) {
@@ -280,6 +291,9 @@ export async function onRequestPut({ request, env }) {
       if (!rs.ok) return J({ error: "Cannot restore this order: " + rs.error }, 400);
     }
     await env.DB.prepare("UPDATE orders SET status=? WHERE id=?").bind(b.status, id).run();
+  }
+  if (hasPay) {   // admin: mark the bank / online payment as paid (slip checked). Paid orders are never auto-cancelled.
+    await env.DB.prepare("UPDATE orders SET pay_state=? WHERE id=? AND payment<>'cod'").bind(b.pay_state, id).run();
   }
   if (det) {
     await env.DB.prepare("UPDATE orders SET name=?,phone1=?,phone2=?,phone_norm=?,district=?,address=? WHERE id=?")
