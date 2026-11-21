@@ -1,0 +1,19 @@
+# Cloudflare Pages response headers
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Admin pages: keep them out of Google
+/admin.html
+  X-Robots-Tag: noindex, nofollow
+/orders.html
+  X-Robots-Tag: noindex, nofollow
+/photos.html
+  X-Robots-Tag: noindex, nofollow
+/banners.html
+  X-Robots-Tag: noindex, nofollow
+/paymethods.html
+  X-Robots-Tag: noindex, nofollow
+/pinreset.html
+  X-Robots-Tag: noindex, nofollow
