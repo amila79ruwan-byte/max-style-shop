@@ -6,9 +6,43 @@ const normPhone = p => String(p || "").replace(/\D/g, "");
 const newToken = () => hex(crypto.getRandomValues(new Uint8Array(24)));
 const DISTRICTS = ["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle","Matara","Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu","Batticaloa","Ampara","Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa","Badulla","Monaragala","Ratnapura","Kegalle"];
 const MAX_ADDR = 10;
-async function hashPin(phone, pin) {
+// PIN hashing: PBKDF2-SHA256 with a random salt per customer (Cloudflare allows up to 100000 iterations).
+// Stored as "p1$iters$salt$hash", or "p2$..." when the optional PIN_PEPPER secret is set (a server-only secret
+// mixed in, so a stolen database alone cannot be brute-forced). Do NOT remove PIN_PEPPER once p2 hashes exist.
+// Old accounts (plain SHA-256, 64 hex chars) still sign in, and are upgraded automatically on their next login.
+const PBKDF2_ITERS = 100000;
+const fromHex = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
+async function pbkdf2(secret, saltBytes, iters) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations: iters }, key, 256));
+}
+async function hashPin(env, phone, pin) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const pep = env.PIN_PEPPER ? String(env.PIN_PEPPER) : "";
+  const h = await pbkdf2(pep + ":" + phone + ":" + pin, salt, PBKDF2_ITERS);
+  return (pep ? "p2" : "p1") + "$" + PBKDF2_ITERS + "$" + hex(salt) + "$" + h;
+}
+const sameStr = (a, b) => {   // constant-time compare of two strings
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+};
+async function legacyHash(phone, pin) {
   return hex(await crypto.subtle.digest("SHA-256", enc.encode("maxstyle:" + phone + ":" + pin)));
 }
+// Returns true when the PIN matches the stored hash (new or old format).
+async function verifyPin(env, stored, phone, pin) {
+  stored = String(stored || "");
+  const parts = stored.split("$");
+  if (parts.length === 4 && (parts[0] === "p1" || parts[0] === "p2")) {
+    const pep = parts[0] === "p2" ? String(env.PIN_PEPPER || "") : "";
+    if (parts[0] === "p2" && !pep) return false;
+    return sameStr(await pbkdf2(pep + ":" + phone + ":" + pin, fromHex(parts[2]), parseInt(parts[1], 10)), parts[3]);
+  }
+  return sameStr(await legacyHash(phone, pin), stored);
+}
+const isLegacy = stored => !/^p[12]\$/.test(String(stored || ""));
 // ---- Login rate limit: stops PIN guessing. Counters live in the login_attempts table (see migrate_login_attempts.sql). ----
 const PHONE_MAX_FAILS = 5;     // wrong PINs allowed for one phone number
 const IP_MAX_FAILS = 20;       // wrong attempts allowed from one IP address
@@ -77,8 +111,8 @@ export async function onRequestGet({ request, env }) {
     addrs = await addressesOf(env, p.id);
   }
   const { results } = await env.DB.prepare(
-    "SELECT id,name,phone1,phone2,district,address,items,total,status,created FROM orders WHERE phone1 LIKE ? ORDER BY id DESC LIMIT 50"
-  ).bind("%" + p.phone.slice(-9)).all();
+    "SELECT id,name,phone1,phone2,district,address,items,total,status,created FROM orders WHERE customer_id=? ORDER BY id DESC LIMIT 50"
+  ).bind(p.id).all();
   const orders = results.map(o => {
     let items = [];
     try { items = JSON.parse(o.items || "[]"); } catch (e) {}
@@ -107,7 +141,7 @@ export async function onRequestPost({ request, env }) {
     if (!/^\d{4}$/.test(pin)) return J({ error: "New PIN must be 4 digits" }, 400);
     const row = await env.DB.prepare("SELECT id FROM customers WHERE phone=?").bind(phone).first();
     if (!row) return J({ error: "No account with this phone number" }, 404);
-    await env.DB.prepare("UPDATE customers SET pin_hash=?, token=NULL WHERE id=?").bind(await hashPin(phone, pin), row.id).run();
+    await env.DB.prepare("UPDATE customers SET pin_hash=?, token=NULL WHERE id=?").bind(await hashPin(env, phone, pin), row.id).run();
     await clearFails(env, "phone:" + phone);   // a locked customer can sign in with the new PIN right away
     return J({ ok: true });
   }
@@ -116,7 +150,6 @@ export async function onRequestPost({ request, env }) {
     const phone = normPhone(b.phone), pin = String(b.pin || "");
     if (phone.length < 9) return J({ error: "Enter a valid phone number" }, 400);
     if (!/^\d{4}$/.test(pin)) return J({ error: "PIN must be 4 digits" }, 400);
-    const ph = await hashPin(phone, pin);
     const pKey = "phone:" + phone, iKey = "ip:" + clientIp(request);
     if (act === "login") {
       const lock = await lockedUntil(env, [pKey, iKey]);
@@ -130,15 +163,17 @@ export async function onRequestPost({ request, env }) {
       if (!name) return J({ error: "Enter your name" }, 400);
       await env.DB.prepare(
         "INSERT INTO customers (phone,name,phone2,district,address,pin_hash,token,token_exp,created) VALUES (?,?,?,?,?,?,?,?,?)"
-      ).bind(phone, name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), ph, tok, Date.now() + TOKEN_MS, Date.now()).run();
+      ).bind(phone, name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), await hashPin(env, phone, pin), tok, Date.now() + TOKEN_MS, Date.now()).run();
     } else {
-      if (!row || row.pin_hash !== ph) {
+      if (!row || !(await verifyPin(env, row.pin_hash, phone, pin))) {
         await addFail(env, pKey, PHONE_MAX_FAILS);
         await addFail(env, iKey, IP_MAX_FAILS);
         return J({ error: "Wrong phone number or PIN" }, 401);
       }
       await clearFails(env, pKey);
       await env.DB.prepare("UPDATE customers SET token=?, token_exp=? WHERE id=?").bind(tok, Date.now() + TOKEN_MS, row.id).run();
+      // Old SHA-256 hash: re-save it with the stronger hash now that we know the PIN.
+      if (isLegacy(row.pin_hash)) await env.DB.prepare("UPDATE customers SET pin_hash=? WHERE id=?").bind(await hashPin(env, phone, pin), row.id).run();
     }
     return J({ ok: true, token: tok });
   }
@@ -150,8 +185,8 @@ export async function onRequestPost({ request, env }) {
   // Customer confirms they received an order that is packed or out for delivery.
   if (act === "confirm") {
     const id = parseInt(String(b.code || "").replace(/\D/g, ""), 10) - 1000;
-    const o = await env.DB.prepare("SELECT id,status FROM orders WHERE id=? AND phone1 LIKE ?")
-      .bind(id, "%" + p.phone.slice(-9)).first();
+    const o = await env.DB.prepare("SELECT id,status FROM orders WHERE id=? AND customer_id=?")
+      .bind(id, p.id).first();
     if (!o) return J({ error: "Order not found" }, 404);
     if (!["packed", "out"].includes(o.status)) return J({ error: "This order cannot be confirmed now" }, 400);
     await env.DB.prepare("UPDATE orders SET status='delivered' WHERE id=?").bind(id).run();
@@ -233,14 +268,14 @@ export async function onRequestPost({ request, env }) {
     const lock = await lockedUntil(env, [pKey]);
     if (lock) return tooMany(lock);
     const row = await env.DB.prepare("SELECT pin_hash FROM customers WHERE id=?").bind(p.id).first();
-    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.old_pin || ""))) {
+    if (!row || !(await verifyPin(env, row.pin_hash, p.phone, String(b.old_pin || "")))) {
       await addFail(env, pKey, PHONE_MAX_FAILS);
       return J({ error: "Current PIN is wrong" }, 401);
     }
     await clearFails(env, pKey);
     const np = String(b.new_pin || "");
     if (!/^\d{4}$/.test(np)) return J({ error: "New PIN must be 4 digits" }, 400);
-    await env.DB.prepare("UPDATE customers SET pin_hash=? WHERE id=?").bind(await hashPin(p.phone, np), p.id).run();
+    await env.DB.prepare("UPDATE customers SET pin_hash=? WHERE id=?").bind(await hashPin(env, p.phone, np), p.id).run();
     return J({ ok: true });
   }
 
@@ -251,7 +286,7 @@ export async function onRequestPost({ request, env }) {
     const lock = await lockedUntil(env, [pKey]);
     if (lock) return tooMany(lock);
     const row = await env.DB.prepare("SELECT pin_hash FROM customers WHERE id=?").bind(p.id).first();
-    if (!row || row.pin_hash !== await hashPin(p.phone, String(b.pin || ""))) {
+    if (!row || !(await verifyPin(env, row.pin_hash, p.phone, String(b.pin || "")))) {
       await addFail(env, pKey, PHONE_MAX_FAILS);
       return J({ error: "PIN is wrong" }, 401);
     }
