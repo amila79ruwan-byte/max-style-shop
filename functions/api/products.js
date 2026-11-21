@@ -3,9 +3,14 @@ const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e
 const normList = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(s => String(s).trim()).filter(Boolean).join(",");
 const CATS = ["women", "men", "kids", "bedsheets", "towels", "pillows", "phone", "toys", "electric", "umbrella", "bags", "school"];
 export async function onRequestGet({ env }) {
-  const { results } = await env.DB.prepare(
-    "SELECT id,name,price,cat,sizes,colors,description,size_chart,stock,feat_order,(image IS NOT NULL AND image<>'') AS has_image,updated FROM products ORDER BY id DESC"
-  ).all();
+  const cols = "id,name,price,cat,sizes,colors,description,size_chart,stock,feat_order,(image IS NOT NULL AND image<>'') AS has_image,updated";
+  let results;
+  try {
+    ({ results } = await env.DB.prepare("SELECT " + cols + ",offer FROM products ORDER BY id DESC").all());
+  } catch (e) {
+    // The offer column is not added yet (migrate_offer.sql not run): the shop keeps working, just without offers.
+    ({ results } = await env.DB.prepare("SELECT " + cols + " FROM products ORDER BY id DESC").all());
+  }
   return J(results);
 }
 
@@ -24,13 +29,26 @@ export async function onRequestPost({ request, env }) {
   // Slider position: 1-15 = shown in the home page slider in that order, 0 = not shown.
   let feat = parseInt(b.feat_order, 10);
   if (!(feat >= 1 && feat <= 15)) feat = 0;
+  // Offer: 1 = shown in the "Offers" menu of the shop, 0 = not.
+  const offer = b.offer ? 1 : 0;
   let id = b.id;
   if (id) {
-    await env.DB.prepare("UPDATE products SET name=?,price=?,cat=?,sizes=?,colors=?,description=?,size_chart=?,stock=?,feat_order=?,updated=? WHERE id=?")
-      .bind(name, price, cat, sizes, colors, description, sizeChart, stock, feat, now, id).run();
+    try {
+      await env.DB.prepare("UPDATE products SET name=?,price=?,cat=?,sizes=?,colors=?,description=?,size_chart=?,stock=?,feat_order=?,offer=?,updated=? WHERE id=?")
+        .bind(name, price, cat, sizes, colors, description, sizeChart, stock, feat, offer, now, id).run();
+    } catch (e) {   // offer column not added yet (migrate_offer.sql not run)
+      await env.DB.prepare("UPDATE products SET name=?,price=?,cat=?,sizes=?,colors=?,description=?,size_chart=?,stock=?,feat_order=?,updated=? WHERE id=?")
+        .bind(name, price, cat, sizes, colors, description, sizeChart, stock, feat, now, id).run();
+    }
   } else {
-    const r = await env.DB.prepare("INSERT INTO products (name,price,cat,sizes,colors,description,size_chart,stock,feat_order,updated) VALUES (?,?,?,?,?,?,?,?,?,?)")
-      .bind(name, price, cat, sizes, colors, description, sizeChart, stock, feat, now).run();
+    let r;
+    try {
+      r = await env.DB.prepare("INSERT INTO products (name,price,cat,sizes,colors,description,size_chart,stock,feat_order,offer,updated) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(name, price, cat, sizes, colors, description, sizeChart, stock, feat, offer, now).run();
+    } catch (e) {   // offer column not added yet (migrate_offer.sql not run)
+      r = await env.DB.prepare("INSERT INTO products (name,price,cat,sizes,colors,description,size_chart,stock,feat_order,updated) VALUES (?,?,?,?,?,?,?,?,?,?)")
+        .bind(name, price, cat, sizes, colors, description, sizeChart, stock, feat, now).run();
+    }
     id = r.meta.last_row_id;
   }
   // The same number can only belong to one product: remove it from any other product.
