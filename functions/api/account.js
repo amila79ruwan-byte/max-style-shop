@@ -100,7 +100,9 @@ async function addressesOf(env, cid) {
 
 // Order history: the customer's orders are matched by the last 9 digits of the phone number.
 export async function onRequestGet({ request, env }) {
-  const p = await me(env, new URL(request.url).searchParams.get("token") || "");
+  // Token comes in the Authorization header (keeps it out of URLs / logs). The ?token= form still works for old pages.
+  const bearer = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const p = await me(env, bearer || new URL(request.url).searchParams.get("token") || "");
   if (!p) return J({ error: "Please sign in" }, 401);
   let addrs = await addressesOf(env, p.id);
   // First time: turn the old single address (if any) into the first saved address, as the default.
@@ -155,8 +157,8 @@ export async function onRequestPost({ request, env }) {
       const lock = await lockedUntil(env, [pKey, iKey]);
       if (lock) return tooMany(lock);
     }
-    const row = await env.DB.prepare("SELECT id,pin_hash FROM customers WHERE phone=?").bind(phone).first();
-    const tok = newToken();
+    const row = await env.DB.prepare("SELECT id,pin_hash,token,token_exp FROM customers WHERE phone=?").bind(phone).first();
+    let tok = newToken();
     if (act === "signup") {
       if (row) return J({ error: "This phone number already has an account. Please sign in." }, 409);
       const name = String(b.name || "").trim();
@@ -171,6 +173,8 @@ export async function onRequestPost({ request, env }) {
         return J({ error: "Wrong phone number or PIN" }, 401);
       }
       await clearFails(env, pKey);
+      // Already signed in on another phone / browser? Reuse that sign-in so the other device is not logged out.
+      if (row.token && row.token_exp > Date.now()) tok = row.token;
       await env.DB.prepare("UPDATE customers SET token=?, token_exp=? WHERE id=?").bind(tok, Date.now() + TOKEN_MS, row.id).run();
       // Old SHA-256 hash: re-save it with the stronger hash now that we know the PIN.
       if (isLegacy(row.pin_hash)) await env.DB.prepare("UPDATE customers SET pin_hash=? WHERE id=?").bind(await hashPin(env, phone, pin), row.id).run();
