@@ -8,7 +8,7 @@ const DRESS_CATS=[["women","Women"],["men","Men"],["kids","Kids"],["bedsheets","
 const getTok=()=>{try{return localStorage.getItem("maxstyle_token")||"";}catch(e){return "";}};
 let newIds=new Set();   // the 12 newest products: they get the NEW label and make up "New Arrivals"
 let PRODUCTS=[],status="loading",cart=loadCart(),wish=new Set(loadWish()),cat="all",term="",onlyWish=false;
-let detail=null,dSize="",dColor="",dQty=1,dChart=false;
+let detail=null,dSize="",dColor="",dQty=1,dChart=false,dPhoto=0;
 $("#wa").href="https://wa.me/"+WHATSAPP;
 
 function loadCart(){try{return JSON.parse(localStorage.getItem("maxstyle_cart")||"{}")||{};}catch(e){return {};}}
@@ -66,6 +66,7 @@ function ensureModal(){
   m.addEventListener("click",e=>{if(e.target===m)closeDetail();});
   $("#pmBox").addEventListener("click",e=>{
     const t=e.target.closest("button");if(!t||!detail)return;
+    if(t.dataset.gal){galGo(Number(t.dataset.gal));return;}
     if(t.hasAttribute("data-x")){closeDetail();return;}
     if(t.dataset.kind==="color"){dColor=t.dataset.val;renderDetail();return;}
     if(t.dataset.kind==="size"){dSize=t.dataset.val;renderDetail();return;}
@@ -73,6 +74,28 @@ function ensureModal(){
     if(t.dataset.q){dQty=Math.min(20,Math.max(1,dQty+Number(t.dataset.q)));renderDetail();return;}
     if(t.hasAttribute("data-add")){addFromDetail();}
   });
+  // Keep the "1 / 4" counter and the remembered photo in step with the sideways scroll (swipe, arrows or mouse).
+  $("#pmBox").addEventListener("scroll",e=>{
+    const g=e.target;if(!g.classList||!g.classList.contains("gal"))return;
+    const i=Math.max(0,Math.min(g.children.length-1,Math.round(g.scrollLeft/galStep(g))));
+    dPhoto=i;
+    const c=$("#pmBox .gal-count");if(c)c.textContent=(i+1)+" / "+g.children.length;
+  },true);
+  // Laptop keyboard: left / right arrows change the photo, Esc closes the popup.
+  document.addEventListener("keydown",e=>{
+    if(!detail)return;
+    if(e.key==="ArrowLeft")galGo(-1);
+    else if(e.key==="ArrowRight")galGo(1);
+    else if(e.key==="Escape")closeDetail();
+  });
+}
+// Distance between two photos in the strip (photo width + the gap between them).
+function galStep(g){return g.children.length>1?(g.children[1].offsetLeft-g.children[0].offsetLeft)||g.clientWidth:g.clientWidth;}
+function galGo(d){
+  const g=$("#pmBox .gal");if(!g)return;
+  const n=g.children.length;if(n<2)return;
+  const i=(Math.round(g.scrollLeft/galStep(g))+d+n)%n;
+  g.scrollTo({left:i*galStep(g),behavior:"smooth"});
 }
 function chartTable(txt){
   const rows=String(txt).split("\n").map(l=>l.trim()).filter(Boolean).map(l=>l.split("|").map(c=>esc(c.trim())));
@@ -83,7 +106,7 @@ function chartTable(txt){
 function openDetail(id){
   ensureModal();
   const p=PRODUCTS.find(x=>x.id==id);if(!p)return;
-  detail=p;dSize="";dColor="";dQty=1;dChart=false;
+  detail=p;dSize="";dColor="";dQty=1;dChart=false;dPhoto=0;
   if(p.sizes.length===1)dSize=p.sizes[0];
   if(p.colorList.length===1)dColor=p.colorList[0].name;
   if(!p.photos){
@@ -99,7 +122,11 @@ function closeDetail(){
   if(curV()==="pm"){history.back();}else{hideModal();}
 }
 function photosHtml(p){
-  if(p.photos&&p.photos.length)return '<div class="gal">'+p.photos.map(x=>'<img src="'+x.url+'" alt="">').join("")+'</div>';
+  if(p.photos&&p.photos.length){
+    const n=p.photos.length;
+    return '<div class="galw"><div class="gal">'+p.photos.map(x=>'<img src="'+x.url+'" alt="">').join("")+'</div>'
+      +(n>1?'<button class="gal-nav gal-prev" data-gal="-1" aria-label="Previous photo">\u2039</button><button class="gal-nav gal-next" data-gal="1" aria-label="Next photo">\u203a</button><span class="gal-count">'+(dPhoto+1)+' / '+n+'</span>':'')+'</div>';
+  }
   return '<div class="pm-img">'+(p.image?'<img src="'+p.image+'" alt="">':esc(p.name.charAt(0)))+'</div>';
 }
 function renderDetail(){
@@ -107,7 +134,7 @@ function renderDetail(){
   const chart=p.chart?chartTable(p.chart):"";
   $("#pmBox").innerHTML=
     '<button class="pm-x" data-x aria-label="Close">×</button>'
-    +photosHtml(p)
+    +'<div class="pm-left">'+photosHtml(p)+'</div><div class="pm-right">'
     +'<h2>'+esc(p.name)+'</h2>'
     +'<div class="pm-price">Rs. '+fmt(p.price)+'</div>'
     +'<div style="font-size:12px;color:#888;margin-top:2px">Code: '+pcode(p.id)+'</div>'
@@ -122,7 +149,9 @@ function renderDetail(){
         +(chart?'<button class="pm-link" data-chart>'+(dChart?'Hide size chart':'Size chart')+'</button>'+(dChart?chart:''):'')
       :'')
     +'<div class="pm-q"><button data-q="-1">−</button><span>'+dQty+'</span><button data-q="1">+</button></div>'
-    +'<button class="pm-add" data-add>Add to cart</button>';
+    +'<button class="pm-add" data-add>Add to cart</button></div>';
+  // Re-drawing the popup (after choosing a size / colour) must not jump back to the first photo.
+  if(dPhoto>0){const g=$("#pmBox .gal");if(g)g.scrollLeft=dPhoto*galStep(g);}
 }
 function addFromDetail(){
   const p=detail;
