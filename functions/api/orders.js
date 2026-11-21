@@ -115,6 +115,17 @@ async function buildStats(env) {
 export async function onRequestPost({ request, env }) {
   await expireUnpaid(env);   // free the stock of unpaid orders first
   const b = await request.json();
+  // Bot check (Cloudflare Turnstile). Only active when the TURNSTILE_SECRET variable is set in Cloudflare Pages.
+  if (env.TURNSTILE_SECRET) {
+    const tok = String(b.cf || "");
+    if (!tok) return J({ error: "Please complete the security check and try again." }, 400);
+    try {
+      const fd = new FormData();
+      fd.append("secret", env.TURNSTILE_SECRET); fd.append("response", tok); fd.append("remoteip", clientIp(request));
+      const v = await (await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: fd })).json();
+      if (!v.success) return J({ error: "Security check failed. Please try again." }, 400);
+    } catch (e) { /* Cloudflare could not be reached: let the order through rather than lose it */ }
+  }
   const name = clean(b.name), phone1 = clean(b.phone1), phone2 = clean(b.phone2);
   const district = clean(b.district), address = String(b.address || "").trim().slice(0, 500);
   if (!name || !phone1 || !address || !DISTRICTS.includes(district)) return J({ error: "Please fill in all required fields." }, 400);
@@ -212,8 +223,9 @@ export async function onRequestPost({ request, env }) {
 
 // Public: customer checks status with an order code. Admin (with password): full list, or ?stats=1 for statistics.
 export async function onRequestGet({ request, env }) {
-  await expireUnpaid(env);
   const q = new URL(request.url).searchParams;
+  if (q.has("turnstile")) return J({ sitekey: env.TURNSTILE_SITEKEY || "" });   // public key for the checkout page ("" = check is off)
+  await expireUnpaid(env);
   // Public: is this signed-in customer eligible for the first order discount? (returns only true/false)
   if (q.has("firstcheck")) {
     const bearer = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
