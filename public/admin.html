@@ -95,6 +95,7 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
     <select id="cat" style="display:none"></select>
     <input id="stock" type="number" inputmode="numeric" min="0" placeholder="Stock (how many available). Leave empty = not tracked">
     <select id="feat"></select>
+    <select id="offer"><option value="">Not an offer</option><option value="1">Offer (shows in the shop's Offers menu)</option></select>
     <div class="hint">Slider position 1-15 = shown in the moving strip on the home page, in that order. If another product already has the same number, it is removed from the slider. If no product has a number, the first 15 products are shown.</div>
     <input id="sizes" placeholder="Sizes, comma separated (e.g. S,M,L,XL). Leave empty for no sizes">
     <input id="colors" placeholder="Colors, comma separated. Add #hex for exact color, e.g. Black,Navy:#1f2a44,Beige:#d8c3a5. Leave empty for none">
@@ -278,14 +279,14 @@ function renderList(){
   $("#pcnt").textContent=term?(list.length+" of "+inCat.length+" products"):(inCat.length+" products");
   $("#list").innerHTML=list.length?list.map(p=>`<div class="item">
     ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
-    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")}<br>${stockHtml(p.stock)}</div>
+    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}${Number(p.offer)?' <span class="stk">🏷 Offer</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")}<br>${stockHtml(p.stock)}</div>
     <button class="edt" onclick="edit(${p.id})">Edit</button>
     <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products in this category yet.")+"</p>";
 }
 $("#psearch").addEventListener("input",renderList);
 function reset(){
   editId=null;image="";
-  ["#name","#price","#stock","#feat","#sizes","#colors","#desc","#chart","#file","#psearch"].forEach(s=>$(s).value="");
+  ["#name","#price","#stock","#feat","#offer","#sizes","#colors","#desc","#chart","#file","#psearch"].forEach(s=>$(s).value="");
   $("#cat").value=curCat;
   $("#prev").style.display="none";$("#ftitle").textContent="Add product · "+catName(curCat);$("#cancel").style.display="none";
   renderList();
@@ -296,6 +297,7 @@ function edit(id){
   $("#name").value=p.name;$("#price").value=p.price;$("#cat").value=p.cat;
   $("#stock").value=(p.stock===null||p.stock===undefined)?"":p.stock;
   $("#feat").value=p.feat_order>0?String(p.feat_order):"";
+  $("#offer").value=Number(p.offer)?"1":"";
   $("#sizes").value=p.sizes||"";$("#colors").value=p.colors||"";
   $("#desc").value=p.description||"";$("#chart").value=p.size_chart||"";
   $("#ftitle").textContent="Edit product "+pcode(id)+" (leave photo empty to keep it)";$("#cancel").style.display="block";
@@ -587,7 +589,7 @@ $("#file").onchange=async e=>{
 };
 $("#save").onclick=async()=>{
   const body={id:editId,name:$("#name").value,price:$("#price").value,cat:$("#cat").value,stock:$("#stock").value,
-    feat_order:$("#feat").value,
+    feat_order:$("#feat").value,offer:$("#offer").value,
     sizes:$("#sizes").value,colors:$("#colors").value,description:$("#desc").value,size_chart:$("#chart").value};
   if(image)body.image=image;
   $("#msg").textContent="Saving…";
