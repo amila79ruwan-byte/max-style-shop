@@ -1,3 +1,4 @@
+import { expireUnpaid, SLIP_HOURS } from "../_lib/expire.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const STATUSES = ["received", "confirmed", "packed", "out", "delivered", "cancelled"];
@@ -13,7 +14,6 @@ const FREE_DELIVERY_FROM = 7000; // free delivery when the items total (after di
 const DELIVERY_FEE = 350;        // courier delivery
 const COD_FEE = 150;             // extra fee for cash on delivery
 const GIFT_WRAP_FEE = 200;       // optional gift wrapping
-const SLIP_HOURS = 24;           // bank / online orders: payment slip must arrive within this time
 
 // The signed-in customer for a token (or null).
 async function customerOf(env, token) {
@@ -111,6 +111,7 @@ async function buildStats(env) {
 }
 
 export async function onRequestPost({ request, env }) {
+  await expireUnpaid(env);   // free the stock of unpaid orders first
   const b = await request.json();
   const name = clean(b.name), phone1 = clean(b.phone1), phone2 = clean(b.phone2);
   const district = clean(b.district), address = String(b.address || "").trim().slice(0, 500);
@@ -193,6 +194,7 @@ export async function onRequestPost({ request, env }) {
 
 // Public: customer checks status with an order code. Admin (with password): full list, or ?stats=1 for statistics.
 export async function onRequestGet({ request, env }) {
+  await expireUnpaid(env);
   const q = new URL(request.url).searchParams;
   // Public: is this signed-in customer eligible for the first order discount? (returns only true/false)
   if (q.has("firstcheck")) {
