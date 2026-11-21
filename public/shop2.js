@@ -52,7 +52,7 @@ function checkFirst(){
   const key=tok+"|"+digits;
   if(key===firstFor)return;
   firstFor=key;
-  fetch("/api/orders?firstcheck="+encodeURIComponent(digits)+"&token="+encodeURIComponent(tok)).then(r=>r.json()).then(d=>{
+  fetch("/api/orders?firstcheck="+encodeURIComponent(digits),{headers:{authorization:"Bearer "+tok}}).then(r=>r.json()).then(d=>{
     if(firstFor===key){firstFlag=!!d.first;updateSummary();}
   }).catch(()=>{});
 }
