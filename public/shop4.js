@@ -18,14 +18,19 @@ function calcTotals(){
 function updateSummary(){
   const t=calcTotals();
   const row=(l,v,extra)=>'<div style="display:flex;justify-content:space-between;margin:4px 0'+(extra||'')+'"><span>'+l+'</span><span>'+v+'</span></div>';
-  const html=row("Items","Rs. "+fmt(t.sub))
+  // withCod=false: the cart drawer, where no payment method is chosen yet, so no cash on delivery fee is added.
+  const build=withCod=>{
+    const cod=withCod?t.cod:0;
+    return row("Items","Rs. "+fmt(t.sub))
     +(t.disc?row("First order discount (10%)","- Rs. "+fmt(t.disc),";color:#1a7f37"):"")
     +row("Delivery",!t.sub?"Rs. 0":t.del?"Rs. "+fmt(t.del):"Free")
-    +(t.cod?row("Cash on delivery fee","Rs. "+fmt(t.cod)):"")
+    +(cod?row("Cash on delivery fee","Rs. "+fmt(cod)):"")
     +(t.wrap?row("Gift wrapping","Rs. "+fmt(t.wrap)):"")
-    +'<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total</span><span>Rs. '+fmt(t.total)+'</span></div>';
-  const box=$("#sumBox");if(box)box.innerHTML=html;
-  const cs=$("#cartSum");if(cs)cs.innerHTML=html;
+    +'<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total</span><span>Rs. '+fmt(t.total-t.cod+cod)+'</span></div>'
+    +(withCod||!t.sub?'':'<div style="font-size:12px;color:#777;margin-top:6px">+ Rs. '+fmt(ckCod)+' only if you choose cash on delivery (you pick the payment method on the next page).</div>');
+  };
+  const box=$("#sumBox");if(box)box.innerHTML=build(true);
+  const cs=$("#cartSum");if(cs)cs.innerHTML=build(false);
   const t2=$("#total2");if(t2)t2.textContent=fmt(t.total);
   const note=!getTok()?"Sign in to get 10% off your first order":(firstFlag===true?"10% first order discount applied ✓":"");
   $$(".firstNote").forEach(n=>{n.textContent=note;n.style.display=note?"block":"none";n.style.color=getTok()?"#1a7f37":"#8a6a1f";});
