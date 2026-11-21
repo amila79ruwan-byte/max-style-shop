@@ -17,13 +17,16 @@ const CSS = `#bannerBox{position:relative;overflow:hidden;background:#111}
 
 const esc = s => String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// Only http(s) links, links inside this shop (/page) and #anchors are allowed. Anything else (javascript:, data:) is dropped.
+const safeLink = u => { u = String(u || "").trim(); return /^(https?:\/\/|\/(?!\/)|#)/i.test(u) ? u : ""; };
+
 function render(list) {
   const style = document.createElement("style");
   style.textContent = CSS;
   document.head.appendChild(style);
   box.innerHTML = '<div class="bn-track">' + list.map(b => {
     const inner = '<img src="' + b.image + '" alt="' + esc(b.text) + '">' + (b.text ? '<div class="bn-txt">' + esc(b.text) + '</div>' : '');
-    return b.link ? '<a class="bn-slide" href="' + esc(b.link) + '">' + inner + '</a>' : '<div class="bn-slide">' + inner + '</div>';
+    return safeLink(b.link) ? '<a class="bn-slide" href="' + esc(safeLink(b.link)) + '">' + inner + '</a>' : '<div class="bn-slide">' + inner + '</div>';
   }).join("") + '</div>' + (list.length > 1 ? '<div class="bn-bars">' + list.map(() => '<i><b></b></i>').join("") + '</div>' : '');
 
   if (list.length < 2) return;
