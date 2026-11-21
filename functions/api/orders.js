@@ -246,8 +246,20 @@ export async function onRequestGet({ request, env }) {
     const code = (q.get("code") || "").trim().toUpperCase();
     const m = code.match(/^MS-(\d+)$/);
     if (!m) return J({ error: "Please enter a valid order code, like MS-1001." }, 400);
-    const row = await env.DB.prepare("SELECT status,items,total,created FROM orders WHERE id=?").bind(Number(m[1]) - 1000).first();
-    if (!row) return J({ error: "Order not found. Please check the code." }, 404);
+    // The last 4 digits of the order's phone number are needed too, so codes cannot simply be counted up (MS-1001, 1002...).
+    const p4 = String(q.get("p") || "").replace(/\D/g, "");
+    if (p4.length !== 4) return J({ error: "Please also enter the last 4 digits of the phone number used for the order." }, 400);
+    // Guessing limit: 30 tries per hour per connection.
+    const tk = "trk:" + clientIp(request), tn = Date.now();
+    try {
+      const t = await env.DB.prepare("SELECT n,updated FROM login_attempts WHERE k=?").bind(tk).first();
+      const cnt = t && tn - t.updated < 3600000 ? t.n : 0;
+      if (cnt >= 30) return J({ error: "Too many tries. Please try again later." }, 429);
+      await env.DB.prepare("INSERT INTO login_attempts (k,n,locked_until,updated) VALUES (?,?,0,?) ON CONFLICT(k) DO UPDATE SET n=?, updated=?")
+        .bind(tk, cnt + 1, cnt ? t.updated : tn, cnt + 1, cnt ? t.updated : tn).run();
+    } catch (e) {}
+    const row = await env.DB.prepare("SELECT status,items,total,created,phone_norm FROM orders WHERE id=?").bind(Number(m[1]) - 1000).first();
+    if (!row || !row.phone_norm || row.phone_norm.slice(-4) !== p4) return J({ error: "Order not found. Please check the code and phone digits." }, 404);
     return J({ code, status: row.status, items: parseItems(row.items), total: row.total, created: row.created });
   }
   if (q.has("stats")) return J(await buildStats(env));
