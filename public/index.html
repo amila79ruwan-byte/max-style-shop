@@ -93,26 +93,20 @@
 .banner .bn-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
 .banner .bn-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55)}
 .banner .bn-dots i.on{background:#fff}
+/* ===== Wide screens (laptop / desktop): stop the phone-style page from stretching across the whole screen ===== */
+@media(min-width:900px){
+  main,footer{max-width:1100px;margin-left:auto;margin-right:auto}
+  header{padding-left:max(10px,calc((100% - 1100px)/2));padding-right:max(10px,calc((100% - 1100px)/2))}
+  .banner{margin-top:12px;border-radius:14px}
+  .bn{left:50%;right:auto;width:420px;transform:translateX(-50%);border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0}
+  .circs{max-width:640px;margin:0 auto}
+  .circs .cp{width:72px;height:72px}
+  .feat .fi{flex:0 0 200px}
+  #chips{flex-wrap:wrap;overflow:visible}
+}
 </style>
 </head>
 <body>
-
-<!-- DEBUG: shows any JavaScript error as a red bar at the bottom of the screen. Remove this block after the problem is fixed. -->
-<script>
-(function(){
-  function show(t){
-    var d=document.createElement('div');
-    d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#c00;color:#fff;font:12px monospace;padding:8px;white-space:pre-wrap;word-break:break-all';
-    d.textContent=t;
-    (document.body||document.documentElement).appendChild(d);
-  }
-  window.addEventListener('error',function(e){
-    if(e.target&&(e.target.src||e.target.href)&&e.target!==window){show('LOAD FAIL: '+(e.target.src||e.target.href));return;}
-    show('ERR: '+e.message+' @ '+String(e.filename||'').split('/').pop()+':'+e.lineno);
-  },true);
-  window.addEventListener('unhandledrejection',function(e){show('PROMISE: '+(e.reason&&e.reason.message||e.reason));});
-})();
-</script>
 
 <header>
   <button class="ib" id="menuBtn" aria-label="Open menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
@@ -306,7 +300,7 @@ try{if(localStorage.getItem("maxstyle_token")){var p2=document.getElementById("p
   var i=0,timer=null;
 
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
-  function safeLink(u){u=String(u||'').trim();return /^(https?:\/\/|\/|#|tel:|mailto:)/i.test(u)?u:''}
+  function safeLink(u){u=String(u||'').trim();return /^(https?:\/\/|\/(?!\/)|#|tel:|mailto:)/i.test(u)?u:''}
 
   function go(n){
     var len=track.children.length;
