@@ -9,6 +9,24 @@ function renderCircs(){
   });
 }
 
+// ---- Flash deals: offer products run across the page; the Flash sale circle + strip show only when there are offers ----
+function renderFlash(){
+  const box=$("#flashBox"),circ=$("#flashCirc"),tr=$("#flashTrack");if(!box||!circ||!tr)return;
+  const offers=PRODUCTS.filter(p=>Number(p.offer)>0).slice(0,12);
+  box.hidden=circ.hidden=!offers.length;
+  if(!offers.length){tr.innerHTML="";return;}
+  let base=offers.slice();while(base.length<6)base=base.concat(offers);
+  const one=p=>{
+    const o=Number(p.old_price)||0,off=o>p.price?Math.round((o-p.price)*100/o):0;
+    return '<div class="fdi" onclick="openDetail('+p.id+')"><div class="fdp">'+(off?'<b>-'+off+'%</b>':'')
+      +(p.image?'<img src="'+p.image+'" alt="" loading="lazy">':esc(p.name.charAt(0)))+'</div><div class="fdn">'+esc(p.name)
+      +'</div><div class="fdr">Rs. '+fmt(p.price)+(o>p.price?'<s>'+fmt(o)+'</s>':'')+'</div></div>';
+  };
+  const html=base.map(one).join("");
+  tr.innerHTML=html+html;   // twice, so the run loops without a gap
+  tr.style.setProperty("--fd-dur",(base.length*3.5)+"s");
+}
+
 // ---- Auto-sliding products strip ----
 let featTimer=null;
 function renderFeatured(){
@@ -45,5 +63,5 @@ fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();
     colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
     desc:p.description||"",
     chart:p.size_chart||""}));
-  status="ok";renderGrid();renderCart();renderFeatured();renderCircs();
+  status="ok";renderGrid();renderCart();renderFeatured();renderCircs();renderFlash();
 }).catch(()=>{status="error";renderGrid();});
