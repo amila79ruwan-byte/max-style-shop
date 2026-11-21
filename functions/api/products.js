@@ -65,6 +65,9 @@ export async function onRequestPost({ request, env }) {
   // Old price (before the offer, shown crossed out). Only kept when it is higher than the real price; otherwise 0.
   // The real price in the "price" column is what customers pay: this number is for display only.
   let oldPrice = parseInt(b.old_price, 10);
+  // Discount % typed in the admin (1-90): the old price is worked out from it, so the red -% tag always matches.
+  const pct = parseInt(b.disc_pct, 10);
+  if (pct >= 1 && pct <= 90) oldPrice = Math.round(price * 100 / (100 - pct));
   if (!(oldPrice > price)) oldPrice = 0;
   try { await env.DB.prepare("UPDATE products SET old_price=? WHERE id=?").bind(oldPrice, id).run(); } catch (e) { /* column not added yet */ }
   return J({ ok: true, id });
