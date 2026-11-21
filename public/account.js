@@ -91,7 +91,7 @@ async function loadProfile() {
   const t = getTok(); P = null;
   if (!t) return;
   try {
-    const r = await fetch("/api/account?token=" + encodeURIComponent(t));
+    const r = await fetch("/api/account", { headers: { authorization: "Bearer " + t } });
     if (r.ok) { const d = await r.json(); P = d.profile; P.orders = d.orders || []; P.addresses = d.addresses || []; }
     else if (r.status === 401) setTok("");
   } catch (e) {}
