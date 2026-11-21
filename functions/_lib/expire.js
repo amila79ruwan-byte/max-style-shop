@@ -3,8 +3,11 @@
 // (at most once a minute per server instance).
 // An order is cancelled when: it is a bank / online order, still waiting for the slip (pay_state = awaiting),
 // the admin has not moved it past "received", and SLIP_HOURS have passed. Its stock goes back.
+// Cash-on-delivery orders still at "received" after COD_HOURS are cancelled the same way.
 // If the admin confirms the order (status confirmed or later) before the time is up, it is never cancelled.
 export const SLIP_HOURS = 24;   // payment slip must arrive within this time
+export const COD_HOURS = 72;    // cash-on-delivery order not confirmed by the admin within this time is cancelled (stock freed). 0 = never
+// (A fake COD order could otherwise lock stock forever.)
 let lastRun = 0;
 
 export async function expireUnpaid(env) {
@@ -13,8 +16,8 @@ export async function expireUnpaid(env) {
   lastRun = now;
   try {
     const { results } = await env.DB.prepare(
-      "SELECT id,items FROM orders WHERE status='received' AND pay_state='awaiting' AND created<? LIMIT 50"
-    ).bind(now - SLIP_HOURS * 3600000).all();
+      "SELECT id,items FROM orders WHERE status='received' AND ((pay_state='awaiting' AND created<?) OR (?>0 AND payment='cod' AND created<?)) LIMIT 50"
+    ).bind(now - SLIP_HOURS * 3600000, COD_HOURS, now - COD_HOURS * 3600000).all();
     for (const o of results) {
       // Only the request that really changes the status puts the stock back (no double restock).
       const r = await env.DB.prepare("UPDATE orders SET status='cancelled' WHERE id=? AND status='received'").bind(o.id).run();
