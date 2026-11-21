@@ -6,6 +6,8 @@ const DISTRICTS = ["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya
 const clean = s => String(s || "").trim().slice(0, 200);
 const codeOf = id => "MS-" + (1000 + Number(id));
 const phoneOk = p => /^[0-9+\s-]{9,15}$/.test(p);
+const last9 = p => String(p || "").replace(/\D/g, "").slice(-9);
+const clientIp = r => r.headers.get("cf-connecting-ip") || "unknown";
 const listOf = v => String(v || "").split(",").map(s => s.trim()).filter(Boolean);
 
 // Price rules (all in Rs.)
@@ -31,7 +33,7 @@ async function isFirstOrder(env, token, phone) {
     .map(p => String(p || "").replace(/\D/g, "").slice(-9))
     .filter(x => x.length === 9))];
   for (const l of last9s) {
-    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE phone1 LIKE ? AND status<>'cancelled'").bind("%" + l).first();
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE phone_norm=? AND status<>'cancelled'").bind(l).first();
     if (row && row.n > 0) return false;
   }
   return true;
@@ -131,7 +133,22 @@ export async function onRequestPost({ request, env }) {
   if (isGift && (!senderName || !phoneOk(senderPhone))) return J({ error: "Please enter your name and phone number (sender)." }, 400);
   const giftMsg = isGift ? String(b.giftMsg || "").trim().slice(0, 300) : "";
   const cartIn = Array.isArray(b.items) ? b.items : [];
-  if (!cartIn.length || cartIn.length > 50) return J({ error: "Your cart is empty." }, 400);
+  if (!cartIn.length || cartIn.length > 30) return J({ error: "Your cart is empty." }, 400);
+
+  // Anti-spam: (1) max 10 orders per hour per IP, (2) max 2 open (not yet confirmed) orders per phone,
+  // (3) max 40 pieces per order. Stops someone locking all the stock with fake orders.
+  const phoneN = last9(phone1);
+  const ipKey = "ordip:" + clientIp(request), nowT = Date.now();
+  try {
+    const row = await env.DB.prepare("SELECT n,updated FROM login_attempts WHERE k=?").bind(ipKey).first();
+    const n = row && nowT - row.updated < 3600000 ? row.n : 0;
+    if (n >= 10) return J({ error: "Too many orders from this connection. Please try again later or WhatsApp us." }, 429);
+    await env.DB.prepare("INSERT INTO login_attempts (k,n,locked_until,updated) VALUES (?,?,0,?) ON CONFLICT(k) DO UPDATE SET n=?, updated=?")
+      .bind(ipKey, n + 1, row && n ? row.updated : nowT, n + 1, row && n ? row.updated : nowT).run();
+  } catch (e) { /* limiter failure must not stop real orders */ }
+  const open = await env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE phone_norm=? AND status='received'").bind(phoneN).first();
+  if (open && open.n >= 2) return J({ error: "You already have 2 orders waiting for confirmation. Please wait for us to confirm them, or WhatsApp us." }, 429);
+  if (cartIn.reduce((s, i) => s + Math.min(Math.max(parseInt(i && i.qty, 10) || 0, 1), 20), 0) > 40) return J({ error: "Too many items in one order. Please WhatsApp us for bulk orders." }, 400);
 
   // Prices are read from the database here. The browser's prices are never trusted.
   const { results: products } = await env.DB.prepare("SELECT id,name,price,sizes,colors,stock FROM products").all();
@@ -177,12 +194,13 @@ export async function onRequestPost({ request, env }) {
   const res = await reserveStock(env, need, products);
   if (!res.ok) return J({ error: res.error }, 400);
 
-  const cols = "name,phone1,phone2,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee,is_gift,gift_wrap,gift_msg,sender_name,sender_phone,hide_sender,pay_state,pay_method_id";
+  const cust = await customerOf(env, b.token);
+  const cols = "name,phone1,phone2,phone_norm,customer_id,district,address,items,total,status,created,payment,subtotal,discount,delivery_fee,cod_fee,is_gift,gift_wrap,gift_msg,sender_name,sender_phone,hide_sender,pay_state,pay_method_id";
   let r;
   try {
   r = await env.DB.prepare(
     "INSERT INTO orders (" + cols + ") VALUES (" + cols.split(",").map(() => "?").join(",") + ")"
-  ).bind(name, phone1, phone2, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
+  ).bind(name, phone1, phone2, phoneN, cust ? cust.id : 0, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
     isGift ? 1 : 0, giftWrap, giftMsg, senderName, senderPhone, isGift && b.hideSender ? 1 : 0, payState, pm ? pm.id : 0).run();
   } catch (e) {
     await releaseStock(env, res.taken);   // the order could not be saved: put the stock back
@@ -242,8 +260,8 @@ export async function onRequestPut({ request, env }) {
     await env.DB.prepare("UPDATE orders SET status=? WHERE id=?").bind(b.status, id).run();
   }
   if (det) {
-    await env.DB.prepare("UPDATE orders SET name=?,phone1=?,phone2=?,district=?,address=? WHERE id=?")
-      .bind(det.name, det.phone1, det.phone2, det.district, det.address, id).run();
+    await env.DB.prepare("UPDATE orders SET name=?,phone1=?,phone2=?,phone_norm=?,district=?,address=? WHERE id=?")
+      .bind(det.name, det.phone1, det.phone2, last9(det.phone1), det.district, det.address, id).run();
   }
   return J({ ok: true });
 }
