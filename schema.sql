@@ -101,3 +101,11 @@ CREATE TABLE IF NOT EXISTS installs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS order_slips (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  image TEXT NOT NULL,                    -- payment slip photo (data URL), shown to the admin only
+  created INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_slips_order ON order_slips(order_id);
