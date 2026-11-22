@@ -147,8 +147,9 @@ export async function onRequestPost(context) {
       .bind(Number(m[1]) - 1000, pn).run();
     return J({ ok: true, changed: !!(r.meta && r.meta.changes > 0) });
   }
-  // Bot check (Cloudflare Turnstile). Only active when the TURNSTILE_SECRET variable is set in Cloudflare Pages.
-  if (env.TURNSTILE_SECRET) {
+  // Bot check (Cloudflare Turnstile). Only active when BOTH TURNSTILE_SITEKEY and TURNSTILE_SECRET are set in Cloudflare Pages.
+  // (Secret alone would make every order fail, because the checkout page never shows the widget without the sitekey.)
+  if (env.TURNSTILE_SECRET && env.TURNSTILE_SITEKEY) {
     const tok = String(b.cf || "");
     if (!tok) return J({ error: "Please complete the security check and try again." }, 400);
     try {
