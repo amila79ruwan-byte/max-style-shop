@@ -9,6 +9,7 @@ export const SLIP_HOURS = 24;   // payment slip must arrive within this time
 export const COD_HOURS = 72;    // cash-on-delivery order not confirmed by the admin within this time is cancelled (stock freed). 0 = never
 // (A fake COD order could otherwise lock stock forever.)
 import { sendTelegram } from "./notify.js";
+import { restockItems } from "./stock.js";
 const codeOf = id => "MS-" + (1000 + Number(id));
 const REMIND_BEFORE_HOURS = 24;   // Telegram reminder this many hours before a COD order would be auto-cancelled
 let lastRun = 0;
@@ -28,15 +29,7 @@ export async function expireUnpaid(env) {
       if (!(r.meta && r.meta.changes > 0)) continue;
       let items = [];
       try { items = JSON.parse(o.items || "[]"); } catch (e) {}
-      const st = [];
-      for (const it of items) {
-        const q = Number(it.qty) || 0;
-        if (!q) continue;
-        st.push(it.id
-          ? env.DB.prepare("UPDATE products SET stock=stock+? WHERE id=? AND stock IS NOT NULL").bind(q, it.id)
-          : env.DB.prepare("UPDATE products SET stock=stock+? WHERE name=? AND stock IS NOT NULL").bind(q, it.name));
-      }
-      if (st.length) await env.DB.batch(st);
+      await restockItems(env, items);
       cancelled.push(o);
     }
     if (cancelled.length) {
