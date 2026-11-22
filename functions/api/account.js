@@ -164,11 +164,11 @@ export async function onRequestPost({ request, env }) {
       if (row) return J({ error: "This phone number already has an account. Please sign in." }, 409);
       // Max 5 new accounts per hour per connection: stops mass fake sign-ups.
       if (!(await hit(env, "signup:" + clientIp(request), 5, 3600000))) return J({ error: "Too many sign-ups from this connection. Please try again later." }, 429);
-      const name = String(b.name || "").trim();
+      const name = String(b.name || "").trim().slice(0, 100);
       if (!name) return J({ error: "Enter your name" }, 400);
       await env.DB.prepare(
         "INSERT INTO customers (phone,name,phone2,district,address,pin_hash,token,token_exp,created) VALUES (?,?,?,?,?,?,?,?,?)"
-      ).bind(phone, name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), await hashPin(env, phone, pin), tok, Date.now() + TOKEN_MS, Date.now()).run();
+      ).bind(phone, name, normPhone(b.phone2) || null, DISTRICTS.includes(String(b.district || "")) ? String(b.district) : "", String(b.address || "").trim().slice(0, 500), await hashPin(env, phone, pin), tok, Date.now() + TOKEN_MS, Date.now()).run();
     } else {
       if (!row || !(await verifyPin(env, row.pin_hash, phone, pin))) {
         await addFail(env, pKey, PHONE_MAX_FAILS);
@@ -201,10 +201,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (act === "update") {
-    const name = String(b.name || "").trim();
+    const name = String(b.name || "").trim().slice(0, 100);
     if (!name) return J({ error: "Enter your name" }, 400);
     await env.DB.prepare("UPDATE customers SET name=?,phone2=?,district=?,address=? WHERE id=?")
-      .bind(name, normPhone(b.phone2) || null, String(b.district || ""), String(b.address || ""), p.id).run();
+      .bind(name, normPhone(b.phone2) || null, DISTRICTS.includes(String(b.district || "")) ? String(b.district) : "", String(b.address || "").trim().slice(0, 500), p.id).run();
     return J({ ok: true });
   }
 
