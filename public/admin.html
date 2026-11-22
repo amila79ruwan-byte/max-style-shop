@@ -435,9 +435,28 @@ async function loadOrders(){
       </div>
       <a class="wa" href="https://wa.me/${waNum(o.phone1)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp customer</a>
       <button class="sec" style="margin-top:8px" onclick="printBill(${o.id})">Bill / Print</button>
+      ${Number(o.slips)>0?`<button class="sec" style="margin-top:8px;border-color:#c9961a;background:#fdf5d8" onclick="viewSlip(${o.id})">📎 View slip (${Number(o.slips)})</button>`:""}
       ${(o.payment||"cod")!=="cod"&&o.pay_state!=="paid"?`<button class="sec" style="margin-top:8px" onclick="markPaid(${o.id})">Slip ආවා ✓ · Mark as paid</button>`:""}
       <div class="brow"><button class="edt" onclick="editOrder(${o.id})">Edit</button><button class="del" onclick="delOrder(${o.id})">Delete</button></div>
     </div>`;}).join(""):"<p>No orders yet.</p>";
+}
+// Shows the payment slip photos of one order (admin only: the server asks for the password).
+async function viewSlip(id){
+  const r=await fetch("/api/slip?order="+id,{headers:hdr()});
+  if(!r.ok){alert("Could not load the slip.");return;}
+  const list=await r.json();
+  if(!list.length){alert("No slip found.");return;}
+  const o=ORD[id]||{};
+  const m=document.createElement("div");
+  m.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);overflow:auto;padding:14px;text-align:center";
+  m.innerHTML='<div style="max-width:520px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;color:#fff;margin-bottom:10px"><b>'+esc(o.code||"")+' · Rs. '+money(o.total)+'</b><button class="sec" style="width:auto;padding:8px 16px" id="slipX">Close</button></div>'
+    +list.map(x=>'<div style="margin-bottom:12px"><img src="'+x.image+'" style="max-width:100%;border-radius:10px;background:#fff"><div style="color:#bbb;font-size:12px;margin-top:4px">'+esc(dt(x.created))+'</div></div>').join("")
+    +(o.pay_state!=="paid"&&(o.payment||"cod")!=="cod"?'<button id="slipPaid" style="width:100%;height:50px;border:0;border-radius:12px;background:#1a7f37;color:#fff;font-weight:700;font-size:16px">Slip හරි ✓ · Mark as paid</button>':"")
+    +'</div>';
+  document.body.appendChild(m);
+  m.querySelector("#slipX").onclick=()=>m.remove();
+  const pd=m.querySelector("#slipPaid");
+  if(pd)pd.onclick=async()=>{m.remove();await markPaid(id);};
 }
 async function markPaid(id){
   if(!confirm("Slip එක බලලා ගෙවීම ලැබුණාද? Mark as paid?"))return;
