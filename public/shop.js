@@ -68,10 +68,10 @@ function ensureModal(){
     const t=e.target.closest("button");if(!t||!detail)return;
     if(t.dataset.gal){galGo(Number(t.dataset.gal));return;}
     if(t.hasAttribute("data-x")){closeDetail();return;}
-    if(t.dataset.kind==="color"){dColor=t.dataset.val;renderDetail();return;}
-    if(t.dataset.kind==="size"){dSize=t.dataset.val;renderDetail();return;}
+    if(t.dataset.kind==="color"){dColor=t.dataset.val;if(dSize&&vLeft(detail,dSize,dColor)<=0)dSize="";renderDetail();return;}
+    if(t.dataset.kind==="size"){dSize=t.dataset.val;if(dColor&&vLeft(detail,dSize,dColor)<=0)dColor="";renderDetail();return;}
     if(t.hasAttribute("data-chart")){dChart=!dChart;renderDetail();return;}
-    if(t.dataset.q){dQty=Math.min(20,Math.max(1,dQty+Number(t.dataset.q)));renderDetail();return;}
+    if(t.dataset.q){const cap=detailCap(detail);dQty=Math.min(20,cap,Math.max(1,dQty+Number(t.dataset.q)));renderDetail();return;}
     if(t.hasAttribute("data-add")){addFromDetail();}
   });
   // Keep the "1 / 4" counter and the remembered photo in step with the sideways scroll (swipe, arrows or mouse).
@@ -103,6 +103,26 @@ function chartTable(txt){
   return '<table><thead><tr>'+rows[0].map(c=>'<th>'+c+'</th>').join("")+'</tr></thead><tbody>'
     +rows.slice(1).map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join("")+'</tr>').join("")+'</tbody></table>';
 }
+// Stock per size / colour. p.variants = [{s: size, c: colour, n: how many}] when the admin tracks stock that way;
+// otherwise the product has one plain stock number (null = not tracked). Returns Infinity when there is no limit.
+function vLeft(p,size,color){
+  if(p.variants){let t=0;for(const v of p.variants){if((!size||v.s===size)&&(!color||v.c===color))t+=v.n;}return t;}
+  return p.stock===null||p.stock===undefined?Infinity:p.stock;
+}
+function detailCap(p){
+  const done=(!p.colorList.length||dColor)&&(!p.sizes.length||dSize);
+  const n=done?vLeft(p,dSize,dColor):Infinity;
+  return n<1?1:n;
+}
+// Label for the size row, by category (phone accessories have models, bed sheets have bed sizes).
+function szl(p){return p.cat==="phone"?"Model":p.cat==="bedsheets"?"Bed size":"Size";}
+function stockNote(p){
+  const done=(!p.colorList.length||dColor)&&(!p.sizes.length||dSize);
+  if(!done)return "";
+  const n=vLeft(p,dSize,dColor);
+  return n!==Infinity&&n>0&&n<=5?'<div style=\"color:#c62828;font-size:13px;font-weight:600;margin-top:8px\">Only '+n+' left · '+n+'ක් පමණයි</div>':"";
+}
+(function(){const c=document.createElement("style");c.textContent=".pm-opt:disabled{opacity:.35;text-decoration:line-through;cursor:not-allowed}";document.head.appendChild(c);})();
 function openDetail(id){
   ensureModal();
   const p=PRODUCTS.find(x=>x.id==id);if(!p)return;
@@ -131,6 +151,7 @@ function photosHtml(p){
 }
 function renderDetail(){
   const p=detail;
+  dQty=Math.min(dQty,detailCap(p));
   const chart=p.chart?chartTable(p.chart):"";
   $("#pmBox").innerHTML=
     '<button class="pm-x" data-x aria-label="Close">×</button>'
@@ -141,23 +162,26 @@ function renderDetail(){
     +(p.desc?'<div class="pm-desc">'+esc(p.desc)+'</div>':'')
     +(p.colorList.length
       ?'<div class="pm-lbl">Color'+(dColor?': '+esc(dColor):'')+'</div><div class="pm-opts">'
-        +p.colorList.map(c=>'<button class="pm-opt'+(dColor===c.name?' on':'')+'" data-kind="color" data-val="'+esc(c.name)+'"><i class="pm-dot" style="background:'+esc(c.hex)+'"></i>'+esc(c.name)+'</button>').join("")+'</div>'
+        +p.colorList.map(c=>'<button class="pm-opt'+(dColor===c.name?' on':'')+'" data-kind="color" data-val="'+esc(c.name)+'"'+(vLeft(p,dSize,c.name)<=0?' disabled':'')+'><i class="pm-dot" style="background:'+esc(c.hex)+'"></i>'+esc(c.name)+'</button>').join("")+'</div>'
       :'')
     +(p.sizes.length
-      ?'<div class="pm-lbl">Size'+(dSize?': '+esc(dSize):'')+'</div><div class="pm-opts">'
-        +p.sizes.map(s=>'<button class="pm-opt'+(dSize===s?' on':'')+'" data-kind="size" data-val="'+esc(s)+'">'+esc(s)+'</button>').join("")+'</div>'
+      ?'<div class="pm-lbl">'+szl(p)+(dSize?': '+esc(dSize):'')+'</div><div class="pm-opts">'
+        +p.sizes.map(s=>'<button class="pm-opt'+(dSize===s?' on':'')+'" data-kind="size" data-val="'+esc(s)+'"'+(vLeft(p,s,dColor)<=0?' disabled':'')+'>'+esc(s)+'</button>').join("")+'</div>'
         +(chart?'<button class="pm-link" data-chart>'+(dChart?'Hide size chart':'Size chart')+'</button>'+(dChart?chart:''):'')
       :'')
+    +stockNote(p)
     +'<div class="pm-q"><button data-q="-1">−</button><span>'+dQty+'</span><button data-q="1">+</button></div>'
-    +'<button class="pm-add" data-add>Add to cart</button></div>';
+    +(vLeft(p,"","")<=0?'<button class="pm-add" disabled style="opacity:.5">Sold out · අවසන්</button>':'<button class="pm-add" data-add>Add to cart</button>')+'</div>';
   // Re-drawing the popup (after choosing a size / colour) must not jump back to the first photo.
   if(dPhoto>0){const g=$("#pmBox .gal");if(g)g.scrollLeft=dPhoto*galStep(g);}
 }
 function addFromDetail(){
   const p=detail;
   if(p.colorList.length&&!dColor){toast("Please select a color");return;}
-  if(p.sizes.length&&!dSize){toast("Please select a size");return;}
+  if(p.sizes.length&&!dSize){toast("Please select a "+szl(p).toLowerCase());return;}
   const k=p.id+"|"+dSize+"|"+dColor;
+  const left=vLeft(p,dSize,dColor),have=cart[k]||0;
+  if(left!==Infinity&&have+dQty>left){toast(left-have<=0?"All available pieces are already in your cart":"Only "+left+" available");return;}
   cart[k]=(cart[k]||0)+dQty;
   renderCart();hideModal();openDr("cart");
 }
