@@ -297,7 +297,7 @@ export async function onRequestGet({ request, env }) {
     return J({ code, status: row.status, items: parseItems(row.items), total: row.total, created: row.created });
   }
   if (q.has("stats")) return J(await buildStats(env));
-  const { results } = await env.DB.prepare("SELECT o.*, p.title AS pay_title FROM orders o LEFT JOIN pay_methods p ON p.id=o.pay_method_id ORDER BY o.id DESC LIMIT 200").all();
+  const { results } = await env.DB.prepare("SELECT o.*, p.title AS pay_title, (SELECT COUNT(*) FROM order_slips s WHERE s.order_id=o.id) AS slips FROM orders o LEFT JOIN pay_methods p ON p.id=o.pay_method_id ORDER BY o.id DESC LIMIT 200").all();
   return J(results.map(o => ({ ...o, code: codeOf(o.id), items: parseItems(o.items) })));
 }
 
@@ -363,6 +363,7 @@ export async function onRequestDelete({ request, env }) {
     for (const o of results) if (o.status !== "cancelled" && o.status !== "delivered") back.push(...parseItems(o.items));
     await adjustStock(env, back, +1);
     await env.DB.batch([
+      env.DB.prepare("DELETE FROM order_slips"),
       env.DB.prepare("DELETE FROM orders"),
       env.DB.prepare("DELETE FROM sqlite_sequence WHERE name='orders'")
     ]);
@@ -373,6 +374,6 @@ export async function onRequestDelete({ request, env }) {
   const cur = await env.DB.prepare("SELECT status,items FROM orders WHERE id=?").bind(id).first();
   if (!cur) return J({ error: "Order not found" }, 404);
   if (cur.status !== "cancelled" && cur.status !== "delivered") await adjustStock(env, parseItems(cur.items), +1);   // delivered goods already left the shop
-  await env.DB.prepare("DELETE FROM orders WHERE id=?").bind(id).run();
+  await env.DB.batch([env.DB.prepare("DELETE FROM order_slips WHERE order_id=?").bind(id), env.DB.prepare("DELETE FROM orders WHERE id=?").bind(id)]);
   return J({ ok: true });
 }
