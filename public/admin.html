@@ -54,6 +54,17 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .srow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
 .catb{display:flex;justify-content:space-between;align-items:center;padding:16px;font-size:16px;margin-bottom:10px}
 .catb span{background:#f3d27a;color:#111;border-radius:999px;padding:2px 12px;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 10px}
+.chips button{width:auto;margin:0;padding:6px 12px;border:1px solid #ccc;border-radius:999px;background:#fff;color:#111;font-size:13px;font-weight:600}
+.chips button.on{background:#111;color:#f3d27a;border-color:#111}
+#vbox{background:#f7f7f7;border:1px solid #e3e3e3;border-radius:10px;padding:10px 12px;margin:0 0 10px}
+#vbox label{display:flex;gap:8px;align-items:center;font-weight:700;font-size:14px}
+#vbox label input{width:auto;margin:0}
+#vgrid{margin-top:8px}
+.vrow{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid #e8e8e8}
+.vrow span{flex:1;font-size:14px}
+.vrow input{width:90px;margin:0;text-align:center}
+#vtot{margin-top:6px;font-size:13px;color:#555}
 </style>
 </head>
 <body>
@@ -102,7 +113,12 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
     <div class="hint">With a Discount %, the Price above is the price BEFORE the discount. The reduced price is worked out for you and that is what the customer pays. The shop shows the old price crossed out, a red -% OFF tag, and the product goes into Flash deals.</div>
     <div class="hint">Slider position 1-15 = shown in the moving strip on the home page, in that order. If another product already has the same number, it is removed from the slider. If no product has a number, the first 15 products are shown.</div>
     <input id="sizes" placeholder="Sizes, comma separated (e.g. S,M,L,XL). Leave empty for no sizes">
+    <div class="chips" id="sizechips"></div>
     <input id="colors" placeholder="Colors, comma separated. Add #hex for exact color, e.g. Black,Navy:#1f2a44,Beige:#d8c3a5. Leave empty for none">
+    <div id="vbox" style="display:none">
+      <label><input type="checkbox" id="vtrack" checked> Different stock for each size / colour</label>
+      <div id="vgrid"></div><div id="vtot"></div>
+    </div>
     <textarea id="desc" placeholder="Description (fabric, care, details)"></textarea>
     <textarea id="chart" placeholder="Size chart. First line = headers, then one row per size. Example:
 Size|Chest|Length
@@ -220,6 +236,77 @@ function itemCode(i){
   }
   return id?pcode(id):"";
 }
+// ---- Product form by category: only the fields that make sense for the chosen category, and stock per size / colour ----
+const CAT_CFG={
+  women:{sizes:1,colors:1,chart:1,sizePh:"Sizes (tap below or type, comma separated)",presets:["S","M","L","XL","XXL"]},
+  men:{sizes:1,colors:1,chart:1,sizePh:"Sizes (tap below or type, comma separated)",presets:["S","M","L","XL","XXL","XXXL"]},
+  kids:{sizes:1,colors:1,chart:1,sizePh:"Ages / sizes (tap below or type, comma separated)",presets:["0-3m","3-6m","6-12m","1-2y","2-3y","3-4y","4-5y","5-6y","6-8y","8-10y"]},
+  bedsheets:{sizes:1,colors:1,chart:1,sizePh:"Bed sizes (tap below or type, comma separated)",presets:["Single","Double","Queen","King"]},
+  towels:{sizes:1,colors:1,chart:0,sizePh:"Towel sizes (tap below or type, comma separated)",presets:["Face","Hand","Bath","Large"]},
+  pillows:{sizes:1,colors:1,chart:0,sizePh:"Pillow sizes (tap below or type, comma separated)",presets:["Standard","King","Pair"]},
+  phone:{sizes:1,colors:1,chart:0,sizePh:"Phone models, comma separated (e.g. iPhone 13,Samsung A54). Leave empty if it fits all",presets:[]},
+  toys:{sizes:0,colors:1,chart:0,presets:[]},
+  electric:{sizes:0,colors:1,chart:0,presets:[]},
+  umbrella:{sizes:0,colors:1,chart:0,presets:[]},
+  bags:{sizes:1,colors:1,chart:0,sizePh:"Bag sizes (tap below or type, comma separated)",presets:["Small","Medium","Large"]},
+  school:{sizes:1,colors:1,chart:0,sizePh:"Sizes (optional, comma separated)",presets:[]}
+};
+const csv=v=>String(v||"").split(",").map(x=>x.trim()).filter(Boolean);
+let VST={};   // stock typed so far, key "size|colour"
+function combos(){
+  const sz=csv($("#sizes").value),cl=csv($("#colors").value).map(c=>c.split(":")[0].trim()).filter(Boolean);
+  if(sz.length&&cl.length)return sz.flatMap(s=>cl.map(c=>[s,c]));
+  if(sz.length)return sz.map(s=>[s,""]);
+  if(cl.length)return cl.map(c=>["",c]);
+  return [];
+}
+function grabGrid(){document.querySelectorAll("#vgrid input[data-k]").forEach(i=>{VST[i.dataset.k]=i.value;});}
+function buildGrid(){
+  grabGrid();
+  const cs=combos(),box=$("#vbox");
+  box.style.display=cs.length?"block":"none";
+  const on=cs.length&&$("#vtrack").checked;
+  $("#stock").style.display=on?"none":"";
+  $("#vgrid").style.display=on?"block":"none";$("#vtot").style.display=on?"block":"none";
+  $("#vgrid").innerHTML=cs.map(([s,c])=>{const k=s+"|"+c;return `<div class="vrow"><span>${esc([s,c].filter(Boolean).join(" · "))}</span><input type="number" inputmode="numeric" min="0" placeholder="0" data-k="${esc(k)}" value="${esc(VST[k]??"")}"></div>`;}).join("");
+  updVtot();
+}
+function updVtot(){
+  let t=0;document.querySelectorAll("#vgrid input[data-k]").forEach(i=>{t+=Math.max(0,parseInt(i.value,10)||0);});
+  $("#vtot").textContent="Total stock: "+t;
+}
+function useVariants(){return combos().length>0&&$("#vtrack").checked;}
+function readVariants(){
+  grabGrid();
+  return combos().map(([s,c])=>({size:s,color:c,stock:Math.max(0,parseInt(VST[s+"|"+c],10)||0)}));
+}
+function buildChips(cfg){
+  const cur=csv($("#sizes").value);
+  $("#sizechips").innerHTML=(cfg.presets||[]).map(x=>`<button type="button" data-v="${esc(x)}" class="${cur.includes(x)?"on":""}">${esc(x)}</button>`).join("");
+}
+function applyCat(cat){
+  const cfg=CAT_CFG[cat]||{sizes:1,colors:1,chart:1,presets:[]};
+  const show=(el,flag)=>{el.style.display=(flag||el.value)?"":"none";};
+  show($("#sizes"),cfg.sizes);show($("#colors"),cfg.colors);show($("#chart"),cfg.chart);
+  $("#sizes").placeholder=cfg.sizePh||"Sizes, comma separated. Leave empty for no sizes";
+  $("#sizechips").style.display=cfg.sizes&&(cfg.presets||[]).length?"flex":"none";
+  buildChips(cfg);buildGrid();
+}
+$("#sizechips").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-v]");if(!b)return;
+  const cur=csv($("#sizes").value),v=b.dataset.v;
+  $("#sizes").value=(cur.includes(v)?cur.filter(x=>x!==v):cur.concat(v)).join(",");
+  buildChips(CAT_CFG[curCat]||{presets:[]});buildGrid();
+});
+$("#sizes").addEventListener("input",()=>{buildChips(CAT_CFG[curCat]||{presets:[]});buildGrid();});
+$("#colors").addEventListener("input",buildGrid);
+$("#vtrack").addEventListener("change",buildGrid);
+$("#vgrid").addEventListener("input",updVtot);
+// Per size / colour numbers under a product in the list (zero shown in red).
+function varsHtml(p){
+  if(!p.variants||!p.variants.length)return "";
+  return '<br><span class="muted" style="font-size:12px">'+p.variants.map(v=>esc([v.s,v.c].filter(Boolean).join("/")||"-")+": "+(v.n<=0?'<b style="color:#c62828">0</b>':v.n)).join(" · ")+'</span>';
+}
 // Stock text: empty stock = not tracked.
 function stockHtml(s){
   if(s===null||s===undefined)return '<span class="muted">Stock: not tracked</span>';
@@ -288,7 +375,7 @@ function renderList(){
   $("#pcnt").textContent=term?(list.length+" of "+inCat.length+" products"):(inCat.length+" products");
   $("#list").innerHTML=list.length?list.map(p=>`<div class="item">
     ${p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="">`:'<div class="np"></div>'}
-    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}${Number(p.offer)?' <span class="stk">🏷 Offer</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")}<br>${stockHtml(p.stock)}</div>
+    <div><span class="pcode">${pcode(p.id)}</span>${p.feat_order>0?' <span class="stk">★ Slider '+p.feat_order+'</span>':''}${Number(p.offer)?' <span class="stk">🏷 Offer</span>':''}<br><b>${esc(p.name)}</b><br>Rs. ${p.price.toLocaleString("en-US")}<br>${stockHtml(p.stock)}${varsHtml(p)}</div>
     <button class="edt" onclick="edit(${p.id})">Edit</button>
     <button class="del" onclick="del(${p.id})">Delete</button></div>`).join(""):"<p>"+(term?"No products found.":"No products in this category yet.")+"</p>";
 }
@@ -309,7 +396,7 @@ $("#price").addEventListener("input",updateSale);
 function reset(){
   editId=null;image="";$("#saleinfo").style.display="none";
   ["#name","#price","#stock","#feat","#offer","#discpct","#sizes","#colors","#desc","#chart","#file","#psearch"].forEach(s=>$(s).value="");
-  $("#cat").value=curCat;
+  $("#cat").value=curCat;VST={};$("#vgrid").innerHTML="";$("#vtrack").checked=true;applyCat(curCat);
   $("#prev").style.display="none";$("#ftitle").textContent="Add product · "+catName(curCat);$("#cancel").style.display="none";
   renderList();
   loadPhotos();
@@ -321,6 +408,9 @@ function edit(id){
   $("#feat").value=p.feat_order>0?String(p.feat_order):"";
   $("#offer").value=Number(p.offer)?"1":"";{const o=Number(p.old_price)||0;if(o>p.price){$("#price").value=o;$("#discpct").value=Math.round((o-p.price)*100/o);}else $("#discpct").value="";updateSale();}
   $("#sizes").value=p.sizes||"";$("#colors").value=p.colors||"";
+  VST={};if(p.variants)p.variants.forEach(v=>{VST[v.s+"|"+v.c]=String(v.n);});
+  $("#vgrid").innerHTML="";$("#vtrack").checked=!!p.variants;   // old products keep their single stock number until the admin ticks the box
+  applyCat(p.cat);
   $("#desc").value=p.description||"";$("#chart").value=p.size_chart||"";
   $("#ftitle").textContent="Edit product "+pcode(id)+" (leave photo empty to keep it)";$("#cancel").style.display="block";
   loadPhotos();
@@ -675,9 +765,10 @@ $("#file").onchange=async e=>{
 $("#save").onclick=async()=>{
   const pr0=Number($("#price").value),pc0=Number($("#discpct").value),disc=pr0>0&&pc0>=1&&pc0<=90;
   const OLD=disc?String(pr0):"";
-  const body={id:editId,name:$("#name").value,price:disc?String(saleOf(pr0,pc0)):$("#price").value,cat:$("#cat").value,stock:$("#stock").value,
+  const body={id:editId,name:$("#name").value,price:disc?String(saleOf(pr0,pc0)):$("#price").value,cat:$("#cat").value,stock:useVariants()?String(readVariants().reduce((t,v)=>t+v.stock,0)):$("#stock").value,
     feat_order:$("#feat").value,offer:$("#offer").value,old_price:OLD,
-    sizes:$("#sizes").value,colors:$("#colors").value,description:$("#desc").value,size_chart:$("#chart").value};
+    sizes:$("#sizes").value,colors:$("#colors").value,description:$("#desc").value,size_chart:$("#chart").value,
+    variants:useVariants()?readVariants():[]};
   if(image)body.image=image;
   $("#msg").textContent="Saving…";
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify(body)});
