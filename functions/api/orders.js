@@ -21,6 +21,22 @@ const DELIVERY_FEE = 350;        // courier delivery
 const COD_FEE = 150;             // extra fee for cash on delivery
 const GIFT_WRAP_FEE = 200;       // optional gift wrapping
 
+
+// New-order alert to the shop owner on Telegram. Only active when TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are set
+// in Cloudflare Pages (Settings > Variables and Secrets). Never blocks or breaks an order.
+async function notifyOwner(env, code, o) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
+  try {
+    const items = o.lines.map(l => "- " + l.name + (l.size ? " (" + l.size + ")" : "") + (l.color ? " [" + l.color + "]" : "") + " x" + l.qty).join("\n");
+    const text = "New order " + code + "\n" + o.name + " - " + o.phone1 + "\n" + o.district + "\n" + items +
+      "\nTotal: Rs. " + o.total + " (" + (o.payment === "cod" ? "COD" : o.payment + ", waiting for slip") + ")";
+    await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text })
+    });
+  } catch (e) { /* alert failure must never affect the order */ }
+}
+
 // The signed-in customer for a token (or null).
 async function customerOf(env, token) {
   if (!token) return null;
@@ -116,7 +132,8 @@ async function buildStats(env) {
   };
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   await expireUnpaid(env);   // free the stock of unpaid orders first
   const b = await readJson(request);
   if (!b) return J({ error: "Bad request" }, 400);
@@ -239,6 +256,7 @@ export async function onRequestPost({ request, env }) {
     await releaseStock(env, res.taken);
     return J({ error: "You already have 2 orders waiting for confirmation. Please wait for us to confirm them, or WhatsApp us." }, 429);
   }
+  try { context.waitUntil(notifyOwner(env, codeOf(r.meta.last_row_id), { name, phone1, district, lines, total, payment })); } catch (e) { /* alert must never break the order */ }
   return J({ ok: true, code: codeOf(r.meta.last_row_id), subtotal, discount, delivery, codFee, giftWrap, total, lines, payState,
     payTitle: pm ? pm.title : "", payDetails: pm ? pm.details : "", deadline: payState === "awaiting" ? now + SLIP_HOURS * 3600000 : 0 });
 }
