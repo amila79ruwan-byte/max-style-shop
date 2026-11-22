@@ -1,6 +1,7 @@
 import { readJson } from "../_lib/json.js";
 import { expireUnpaid, SLIP_HOURS } from "../_lib/expire.js";
 import { hit } from "../_lib/ratelimit.js";
+import { reserveLines, releaseTaken, restockItems } from "../_lib/stock.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const STATUSES = ["received", "confirmed", "packed", "out", "delivered", "cancelled"];
@@ -57,44 +58,6 @@ async function isFirstOrder(env, token, phone) {
     if (row && row.n > 0) return false;
   }
   return true;
-}
-
-// Stock: sign +1 puts the items back, sign -1 takes them out. Products with no stock number (NULL) are not tracked.
-async function adjustStock(env, items, sign) {
-  if (!items || !items.length) return;
-  const { results: prods } = await env.DB.prepare("SELECT id,name FROM products").all();
-  const qtyById = {};
-  for (const it of items) {
-    const p = prods.find(x => (it.id ? x.id == it.id : x.name === it.name));
-    if (!p) continue;
-    qtyById[p.id] = (qtyById[p.id] || 0) + (Number(it.qty) || 0);
-  }
-  const st = Object.entries(qtyById).map(([id, q]) => sign > 0
-    ? env.DB.prepare("UPDATE products SET stock=stock+? WHERE id=? AND stock IS NOT NULL").bind(q, id)
-    : env.DB.prepare("UPDATE products SET stock=MAX(stock-?,0) WHERE id=? AND stock IS NOT NULL").bind(q, id));
-  if (st.length) await env.DB.batch(st);
-}
-
-// Takes the stock out for a new order in one safe step per product: the UPDATE only works when enough is left,
-// so two orders at the same moment can never take the same last item. Products with no stock number (NULL) are skipped.
-// Returns { ok:true, taken } or { ok:false, error } (and puts back anything it already took).
-async function reserveStock(env, need, products) {
-  const taken = [];
-  for (const id in need) {
-    const p = products.find(x => x.id == id);
-    if (!p || p.stock === null || p.stock === undefined) continue;   // not tracked
-    const r = await env.DB.prepare("UPDATE products SET stock=stock-? WHERE id=? AND stock IS NOT NULL AND stock>=?").bind(need[id], id, need[id]).run();
-    if (r.meta && r.meta.changes > 0) { taken.push({ id, qty: need[id] }); continue; }
-    await releaseStock(env, taken);
-    const now = await env.DB.prepare("SELECT stock FROM products WHERE id=?").bind(id).first();
-    const left = now && now.stock !== null && now.stock !== undefined ? now.stock : 0;
-    return { ok: false, error: left <= 0 ? p.name + " is sold out." : "Only " + left + " left of " + p.name + "." };
-  }
-  return { ok: true, taken };
-}
-async function releaseStock(env, taken) {
-  if (!taken || !taken.length) return;
-  await env.DB.batch(taken.map(t => env.DB.prepare("UPDATE products SET stock=stock+? WHERE id=? AND stock IS NOT NULL").bind(t.qty, t.id)));
 }
 
 // Admin stats: totals, per day (Sri Lanka time, day changes at 00:00) and per product. Cancelled orders are not counted.
@@ -213,16 +176,6 @@ export async function onRequestPost(context) {
     subtotal += p.price * qty;
   }
 
-  // Stock check (only for products that have a stock number)
-  const need = {};
-  for (const l of lines) need[l.id] = (need[l.id] || 0) + l.qty;
-  for (const id in need) {
-    const p = products.find(x => x.id == id);
-    if (p.stock !== null && p.stock !== undefined && p.stock < need[id]) {
-      return J({ error: p.stock <= 0 ? p.name + " is sold out." : "Only " + p.stock + " left of " + p.name + "." }, 400);
-    }
-  }
-
   // Discounts and fees (first order discount: signed-in customers only)
   const firstOrder = await isFirstOrder(env, b.token, phone1);
   const discount = firstOrder ? Math.round(subtotal * FIRST_ORDER_PCT / 100) : 0;
@@ -235,7 +188,7 @@ export async function onRequestPost(context) {
   const now = Date.now();
 
   // Take the stock first (safe against two orders at the same moment). If anything fails after this, it is put back.
-  const res = await reserveStock(env, need, products);
+  const res = await reserveLines(env, lines);
   if (!res.ok) return J({ error: res.error }, 400);
 
   const cust = await customerOf(env, b.token);
@@ -250,11 +203,11 @@ export async function onRequestPost(context) {
     ).bind(name, phone1, phone2, phoneN, cust ? cust.id : 0, district, address, JSON.stringify(lines), total, "received", now, payment, subtotal, discount, delivery, codFee,
       isGift ? 1 : 0, giftWrap, giftMsg, senderName, senderPhone, isGift && b.hideSender ? 1 : 0, payState, pm ? pm.id : 0, phoneN).run();
   } catch (e) {
-    await releaseStock(env, res.taken);   // the order could not be saved: put the stock back
+    await releaseTaken(env, res.taken);   // the order could not be saved: put the stock back
     return J({ error: "Could not place the order. Please try again." }, 500);
   }
   if (!(r.meta && r.meta.changes > 0)) {   // blocked by the 2-open-orders rule: put the stock back
-    await releaseStock(env, res.taken);
+    await releaseTaken(env, res.taken);
     return J({ error: "You already have 2 orders waiting for confirmation. Please wait for us to confirm them, or WhatsApp us." }, 429);
   }
   try { context.waitUntil(notifyOwner(env, codeOf(r.meta.last_row_id), { name, phone1, district, lines, total, payment })); } catch (e) { /* alert must never break the order */ }
@@ -328,15 +281,9 @@ export async function onRequestPut({ request, env }) {
   if (hasStatus) {
     const was = cur.status === "cancelled", will = b.status === "cancelled";
     const items = parseItems(cur.items);
-    if (!was && will) await adjustStock(env, items, +1);   // cancelled: put the stock back
+    if (!was && will) await restockItems(env, items);   // cancelled: put the stock back
     if (was && !will) {   // un-cancelled: take the stock out again, but only if enough is left
-      const { results: prods } = await env.DB.prepare("SELECT id,name,stock FROM products").all();
-      const need = {};
-      for (const it of items) {
-        const pr = prods.find(x => (it.id ? x.id == it.id : x.name === it.name));
-        if (pr) need[pr.id] = (need[pr.id] || 0) + (Number(it.qty) || 0);
-      }
-      const rs = await reserveStock(env, need, prods);
+      const rs = await reserveLines(env, items);
       if (!rs.ok) return J({ error: "Cannot restore this order: " + rs.error }, 400);
     }
     await env.DB.prepare("UPDATE orders SET status=? WHERE id=?").bind(b.status, id).run();
@@ -361,7 +308,7 @@ export async function onRequestDelete({ request, env }) {
     const { results } = await env.DB.prepare("SELECT items,status FROM orders").all();
     const back = [];
     for (const o of results) if (o.status !== "cancelled" && o.status !== "delivered") back.push(...parseItems(o.items));
-    await adjustStock(env, back, +1);
+    await restockItems(env, back);
     await env.DB.batch([
       env.DB.prepare("DELETE FROM order_slips"),
       env.DB.prepare("DELETE FROM orders"),
@@ -373,7 +320,7 @@ export async function onRequestDelete({ request, env }) {
   const id = Number(q.get("id"));
   const cur = await env.DB.prepare("SELECT status,items FROM orders WHERE id=?").bind(id).first();
   if (!cur) return J({ error: "Order not found" }, 404);
-  if (cur.status !== "cancelled" && cur.status !== "delivered") await adjustStock(env, parseItems(cur.items), +1);   // delivered goods already left the shop
+  if (cur.status !== "cancelled" && cur.status !== "delivered") await restockItems(env, parseItems(cur.items));   // delivered goods already left the shop
   await env.DB.batch([env.DB.prepare("DELETE FROM order_slips WHERE order_id=?").bind(id), env.DB.prepare("DELETE FROM orders WHERE id=?").bind(id)]);
   return J({ ok: true });
 }
