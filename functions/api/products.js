@@ -1,5 +1,6 @@
 import { readJson } from "../_lib/json.js";
 import { expireUnpaid } from "../_lib/expire.js";
+import { ensureVariants } from "../_lib/stock.js";
 const J = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 const ok = (r, e) => e.ADMIN_PASSWORD && r.headers.get("x-admin-password") === e.ADMIN_PASSWORD;
 const normList = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(s => String(s).trim()).filter(Boolean).join(",");
@@ -18,7 +19,14 @@ export async function onRequestGet({ env }) {
       ({ results } = await env.DB.prepare("SELECT " + cols + " FROM products ORDER BY id DESC").all());
     }
   }
-  return J(results);
+  // Stock per size / colour (only products that have it get a "variants" list: [{s: size, c: colour, n: how many}]).
+  const vmap = {};
+  try {
+    await ensureVariants(env);
+    const { results: vr } = await env.DB.prepare("SELECT product_id,size,color,stock FROM product_variants ORDER BY id").all();
+    for (const r of vr) (vmap[r.product_id] || (vmap[r.product_id] = [])).push({ s: r.size, c: r.color, n: r.stock });
+  } catch (e) { /* variants could not be read: the shop keeps working with the plain stock number */ }
+  return J(results.map(p => (vmap[p.id] ? { ...p, variants: vmap[p.id] } : p)));
 }
 
 export async function onRequestPost({ request, env }) {
@@ -70,13 +78,35 @@ export async function onRequestPost({ request, env }) {
   if (pct >= 1 && pct <= 90) oldPrice = Math.round(price * 100 / (100 - pct));
   if (!(oldPrice > price)) oldPrice = 0;
   try { await env.DB.prepare("UPDATE products SET old_price=? WHERE id=?").bind(oldPrice, id).run(); } catch (e) { /* column not added yet */ }
+  // Stock per size / colour: the admin sends the full list [{size,color,stock}], which replaces the old one.
+  // An empty list switches the product back to one plain stock number. products.stock always becomes the total.
+  if (Array.isArray(b.variants)) {
+    const sizeList = sizes ? sizes.split(",") : [], colorList = colors ? colors.split(",").map(c => c.split(":")[0].trim()) : [];
+    const seen = new Set(), rows = [];
+    if (b.variants.length > 300) return J({ error: "Too many size / colour combinations (max 300)." }, 400);
+    for (const v of b.variants) {
+      const size = String(v && v.size || "").trim(), color = String(v && v.color || "").trim();
+      if ((sizeList.length ? !sizeList.includes(size) : size) || (colorList.length ? !colorList.includes(color) : color)) continue;   // not a size / colour of this product
+      const k = size + "|" + color;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push([size, color, Math.min(Math.max(parseInt(v.stock, 10) || 0, 0), 100000)]);
+    }
+    await ensureVariants(env);
+    const st = [env.DB.prepare("DELETE FROM product_variants WHERE product_id=?").bind(id)];
+    for (const r of rows) st.push(env.DB.prepare("INSERT INTO product_variants (product_id,size,color,stock) VALUES (?,?,?,?)").bind(id, r[0], r[1], r[2]));
+    if (rows.length) st.push(env.DB.prepare("UPDATE products SET stock=? WHERE id=?").bind(rows.reduce((t, r) => t + r[2], 0), id));
+    await env.DB.batch(st);
+  }
   return J({ ok: true, id });
 }
 
 export async function onRequestDelete({ request, env }) {
   if (!ok(request, env)) return J({ error: "Wrong password" }, 401);
   const id = new URL(request.url).searchParams.get("id");
+  await ensureVariants(env);
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM product_variants WHERE product_id=?").bind(id),
     env.DB.prepare("DELETE FROM product_photos WHERE product_id=?").bind(id),   // its extra photos go too
     env.DB.prepare("DELETE FROM products WHERE id=?").bind(id)
   ]);
