@@ -69,6 +69,7 @@ fetch("/api/products").then(r=>{if(!r.ok)throw new Error("bad");return r.json();
     sizes:p.sizes?String(p.sizes).split(",").map(s=>s.replace(/[^\w.\-\/ ]/g,"").trim()).filter(Boolean):[],
     colorList:listOf(p.colors).map(s=>{const [n,h]=s.split(":");const name=n.trim();return {name,hex:(h||name).trim()};}),
     desc:p.description||"",
-    chart:p.size_chart||""}));
+    chart:p.size_chart||"",
+    variants:p.variants?p.variants.map(v=>({s:String(v.s).replace(/[^\w.\-\/ ]/g,"").trim(),c:v.c,n:v.n})):null}));
   status="ok";renderGrid();renderCart();renderFeatured();renderCircs();renderFlash();
 }).catch(()=>{status="error";renderGrid();});
