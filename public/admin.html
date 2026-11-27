@@ -130,6 +130,11 @@ body{padding-bottom:88px}
 .bnav button.on{background:#f3c846;color:#111}
 .bnav .nb{position:absolute;top:2px;left:50%;margin-left:8px;background:#e11d48;color:#fff;font-size:10px;font-style:normal;font-weight:700;border-radius:999px;padding:0 5px;line-height:16px}
 .bnav .nb:empty{display:none}
+.av{width:42px;height:42px;font-size:16px}
+.o2s em{font-style:normal;display:block;font-size:12px;font-weight:700;margin-top:2px}
+.o2fl{font-size:12px;font-weight:700;color:#666;margin:8px 0 4px}
+#o2fpanel select{width:100%;margin:0 0 4px;padding:9px 10px;font-size:14px;border-radius:10px;background:#fff}
+#ocus input{margin:0;flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -244,11 +249,14 @@ M|96|70"></textarea>
       <div><b>Orders Management</b><small id="ocount">Manage all customer orders</small></div>
       <select id="o2range">
         <option value="0">Today</option>
-        <option value="7">Last 7 days</option>
-        <option value="30" selected>Last 30 days</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="month">This month</option>
+        <option value="custom">Custom range</option>
         <option value="all">All time</option>
       </select>
     </div>
+    <div id="ocus" style="display:none;gap:8px;margin-bottom:10px"><input type="date" id="ocFrom"><input type="date" id="ocTo"></div>
     <div class="o2stats" id="o2stats"></div>
     <div class="o2bar">
       <input id="o2q" type="search" placeholder="🔍 Search orders…">
@@ -593,7 +601,7 @@ const OST={
   cancelled:["❌","#f19a9a","#fde2e2","#b91c1c"]
 };
 const OPER=5;
-let OALL=[], OPAGE=1, OQ="", OFIL="all", ORNG="30", OEXP={};
+let OALL=[], OPAGE=1, OQ="", OFIL="all", ORNG="7", OEXP={};
 // Product id of an order line (saved id, or found by name) -> used for the little photo
 function itemPid(i){
   let id=i.id||i.product_id||i.productId;
@@ -609,12 +617,41 @@ function itemThumb(i){
   return p&&p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="" loading="lazy">`:'<div class="np"></div>';
 }
 const shortDt=t=>t?new Date(t).toLocaleString("en-GB",{timeZone:"Asia/Colombo",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true}):"";
-function inRange(){
-  if(ORNG==="all")return OALL;
-  if(ORNG==="0"){const t=dayKey(Date.now());return OALL.filter(o=>dayKey(o.created)===t);}
-  const lim=Date.now()-Number(ORNG)*864e5;
-  return OALL.filter(o=>new Date(o.created).getTime()>=lim);
+// Sri Lanka is UTC+5:30 all year (no daylight saving), so days/months are cut at 00:00 there.
+const SL_OFF=5.5*36e5;
+const sodSL=t=>Math.floor((t+SL_OFF)/864e5)*864e5-SL_OFF;
+let OCUS={from:"",to:""}, OPAY="all", ODIST="all";
+// [from,to) of the chosen range, and the previous period of the same length (pf/pt; null = no comparison)
+function rangeBounds(){
+  const now=Date.now(), DAY=864e5;
+  if(ORNG==="all")return {from:0,to:Infinity,pf:null,pt:null};
+  if(ORNG==="0"){const f=sodSL(now);return {from:f,to:Infinity,pf:f-DAY,pt:f};}
+  if(ORNG==="month"){
+    const d=new Date(now+SL_OFF), f=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)-SL_OFF;
+    const pd=new Date(f-1+SL_OFF), pf=Date.UTC(pd.getUTCFullYear(),pd.getUTCMonth(),1)-SL_OFF;
+    return {from:f,to:Infinity,pf,pt:f};
+  }
+  if(ORNG==="custom"){
+    const f=OCUS.from?Date.parse(OCUS.from+"T00:00:00+05:30"):sodSL(now);
+    const t=OCUS.to?Date.parse(OCUS.to+"T00:00:00+05:30")+DAY:Infinity;
+    if(t<=f)return {from:f,to:f,pf:null,pt:null};
+    const len=t-f;
+    return {from:f,to:t,pf:f-len,pt:f};
+  }
+  const f=now-Number(ORNG)*DAY;               // Last 7 / 30 days
+  return {from:f,to:Infinity,pf:f-Number(ORNG)*DAY,pt:f};
 }
+function inRange(){
+  const b=rangeBounds();
+  return OALL.filter(o=>{const t=new Date(o.created).getTime();return t>=b.from&&t<b.to;});
+}
+function prevRows(){
+  const b=rangeBounds();if(b.pf===null)return [];
+  return OALL.filter(o=>{const t=new Date(o.created).getTime();return t>=b.pf&&t<b.pt;});
+}
+// "↑ 12.5%" / "↓ 3.0%" against the previous period (empty when there is nothing to compare)
+const chgTag=(c,p)=>{if(!p)return "";const v=(c-p)/p*100;return `<em>${v>=0?"↑":"↓"} ${Math.abs(v).toFixed(1)}%</em>`;};
+const payOk=o=>{const p=o.payment||"cod";return OPAY==="all"||(OPAY==="other"?(p!=="cod"&&p!=="bank"):p===OPAY);};
 async function loadOrders(){
   const r=await fetch("/api/orders",{headers:hdr()});
   if(!r.ok){$("#olist").innerHTML='<p class="msg">Could not load orders.</p>';return;}
@@ -634,17 +671,27 @@ function renderOrders(){
   $("#bellN").textContent=bn||"";
   $("#navN").textContent=bn||"";
   $("#ocount").textContent="Manage all customer orders";
+  const prv=prevRows(), pl=prv.filter(o=>o.status!=="cancelled");
+  const psales=pl.reduce((s,o)=>s+(Number(o.total)||0),0);
+  const pcust=new Set(prv.map(o=>String(o.phone1||o.name).replace(/\D/g,"")||o.name)).size;
+  const ppend=prv.filter(o=>o.status!=="delivered"&&o.status!=="cancelled").length;
+  const card=(cls,ic,label,val,c,p)=>`<div class="o2s ${cls}"><i>${ic}</i><div><small>${label}</small><b>${val}</b>${chgTag(c,p)}</div></div>`;
   $("#o2stats").innerHTML=
-    `<div class="o2s y"><i>🛒</i><div><small>Total Orders</small><b>${money(base.length)}</b></div></div>`+
-    `<div class="o2s g"><i>💰</i><div><small>Total Sales</small><b>Rs. ${money(sales)}</b></div></div>`+
-    `<div class="o2s p"><i>👥</i><div><small>Customers</small><b>${money(cust)}</b></div></div>`+
-    `<div class="o2s o"><i>📦</i><div><small>Pending</small><b>${money(pend)}</b></div></div>`;
+    card("y","🛒","Total Orders",money(base.length),base.length,prv.length)+
+    card("g","💰","Total Sales","Rs. "+money(sales),sales,psales)+
+    card("p","👥","Customers",money(cust),cust,pcust)+
+    card("o","📦","Pending",money(pend),pend,ppend);
   // status chips (with counts)
   const cnt={};base.forEach(o=>cnt[o.status]=(cnt[o.status]||0)+1);
-  $("#o2fpanel").innerHTML=[["all","All"],...STATUSES].map(([v,l])=>`<button class="${OFIL===v?"on":""}" onclick="setOFil('${v}')">${l} ${v==="all"?base.length:(cnt[v]||0)}</button>`).join("");
+  const dists=[...new Set(base.map(o=>String(o.district||"").trim()).filter(Boolean))].sort();
+  if(ODIST!=="all"&&!dists.includes(ODIST))ODIST="all";
+  $("#o2fpanel").innerHTML=
+    `<div class="o2fl">Order status</div><div class="chips">${[["all","All"],...STATUSES].map(([v,l])=>`<button class="${OFIL===v?"on":""}" onclick="setOFil('${v}')">${l} ${v==="all"?base.length:(cnt[v]||0)}</button>`).join("")}</div>`+
+    `<div class="o2fl">Payment method</div><div class="chips">${[["all","All"],["cod","Cash on delivery"],["bank","Bank deposit"],["other","Online transfer"]].map(([v,l])=>`<button class="${OPAY===v?"on":""}" onclick="setOPay('${v}')">${l}</button>`).join("")}</div>`+
+    `<div class="o2fl">Delivery location</div><select onchange="setODist(this.value)"><option value="all">All locations</option>${dists.map(d=>`<option value="${esc(d)}"${ODIST===d?" selected":""}>${esc(d)}</option>`).join("")}</select>`;
   // filter + search
   const term=OQ.trim().toLowerCase();
-  const list=base.filter(o=>(OFIL==="all"||o.status===OFIL)&&(!term||
+  const list=base.filter(o=>(OFIL==="all"||o.status===OFIL)&&payOk(o)&&(ODIST==="all"||String(o.district||"").trim()===ODIST)&&(!term||
     [o.code,o.name,o.phone1,o.phone2,o.district,o.address].some(x=>String(x||"").toLowerCase().includes(term))));
   const pages=Math.max(1,Math.ceil(list.length/OPER));
   if(OPAGE>pages)OPAGE=pages;
@@ -704,8 +751,12 @@ function toggleO(id){OEXP[id]=!OEXP[id];renderOrders();}
 function goOPage(n){OPAGE=n;renderOrders();$("#olist").scrollIntoView({block:"start"});}
 function setOFil(v){OFIL=v;OPAGE=1;renderOrders();}
 $("#o2q").oninput=e=>{OQ=e.target.value;OPAGE=1;renderOrders();};
-$("#o2range").onchange=e=>{ORNG=e.target.value;OPAGE=1;renderOrders();};
-$("#o2f").onclick=()=>{const f=$("#o2fpanel");f.style.display=f.style.display==="flex"?"none":"flex";};
+$("#o2range").onchange=e=>{ORNG=e.target.value;$("#ocus").style.display=ORNG==="custom"?"flex":"none";OPAGE=1;renderOrders();};
+$("#ocFrom").onchange=e=>{OCUS.from=e.target.value;OPAGE=1;renderOrders();};
+$("#ocTo").onchange=e=>{OCUS.to=e.target.value;OPAGE=1;renderOrders();};
+function setOPay(v){OPAY=v;OPAGE=1;renderOrders();}
+function setODist(v){ODIST=v;OPAGE=1;renderOrders();}
+$("#o2f").onclick=()=>{const f=$("#o2fpanel");f.style.display=f.style.display==="block"?"none":"block";};
 // Shows the payment slip photos of one order (admin only: the server asks for the password).
 async function viewSlip(id){
   const r=await fetch("/api/slip?order="+id,{headers:hdr()});
