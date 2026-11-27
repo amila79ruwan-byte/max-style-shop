@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Max Style Admin v4</title>
+<title>Max Style Admin</title>
 <link rel="manifest" href="manifest-admin.json">
 <meta name="theme-color" content="#111111">
 <link rel="apple-touch-icon" href="admin-icon-192.png">
@@ -136,47 +136,7 @@ body{padding-bottom:88px}
 .o2fl{font-size:12px;font-weight:700;color:#666;margin:8px 0 4px}
 #o2fpanel select{width:100%;margin:0 0 4px;padding:9px 10px;font-size:14px;border-radius:10px;background:#fff}
 #ocus input{margin:0;flex:1;min-width:0}
-/* No pull-to-refresh / edge overscroll: a pull on the screen should not reload or leave the page */
-html,body{overscroll-behavior:none}
-/* ---- Order page (opened by View) ---- */
-.dt{background:#fff;border-radius:18px;overflow:hidden}
-.dt-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#0b0b0b;padding:10px;border-bottom:2px solid #f3c846}
-.dt-bar button{width:auto;margin:0;padding:10px 14px;border-radius:12px;font-size:15px}
-.dt-back{background:transparent!important;color:#fff!important;border:0!important;padding-left:4px!important}
-.dt-edit{background:#f3c846!important;color:#111!important;border:0!important}
-.dt-cust{background:linear-gradient(135deg,#0b0b0b,#1e1e1e);color:#fff;border:2px solid #f3c846;border-radius:16px;margin:10px;padding:12px;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:10px;align-items:center}
-.dt-av{width:68px;height:68px;border-radius:50%;background:#f3c846;color:#111;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.dt-code{display:inline-block;background:#f3c846;color:#111;border-radius:999px;padding:3px 12px;font-weight:800;font-size:14px}
-.dt-cm b{display:block;font-size:17px;margin:6px 0 4px}
-.dt-cm div{font-size:13px;color:#eee;margin-bottom:2px}
-.dt-date{border-left:1px solid #f3c846;padding-left:10px;font-size:12px;text-align:center;color:#eee;min-width:92px}
-.dt-date b{display:block;color:#fff;font-size:13px}
-.dt-call{display:block;margin-top:8px;background:#1e3a8a;color:#fff!important;border-radius:12px;padding:10px 6px;text-decoration:none;font-weight:800;font-size:15px}
-.dt-sec{background:#0b0b0b;color:#fff;margin:10px;border-radius:12px;padding:10px 14px;font-weight:800;font-size:16px;border:1px solid #f3c846}
-.dt-sec span{color:#f3c846}
-.dt-it{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #eee}
-.dt-th{width:76px;height:88px;border-radius:12px;overflow:hidden;background:#f1f1f1}
-.dt-th img,.dt-th .np{width:100%;height:100%;object-fit:cover;display:block;background:#f1f1f1}
-.dt-ic{background:#e6ebff;color:#1e3a8a;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800}
-.dt-q{display:inline-block;background:#fde68a;color:#7a5600;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-top:4px}
-.dt-ip{font-weight:800;font-size:15px;white-space:nowrap}
-.dt-sum{background:#eef4ff;margin:10px;border-radius:12px;padding:6px 12px}
-.dt-sum div{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #dde6f7;font-size:14px}
-.dt-sum div:last-child{border-bottom:0}
-.dt-sum .dt-tot{background:#f3c846;border-radius:10px;padding:10px 12px;margin:6px -2px 2px;font-size:18px;font-weight:800;border:0}
-.dt-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px;background:#f7f9fd;border-radius:12px;padding:12px;font-size:14px}
-.dt-pair small{display:block;color:#666;font-size:12px;margin-bottom:2px}
-.dt-pair span{display:block;color:#555;font-size:12px}
-.dt-status{margin:10px;background:#eef4ff;border-radius:12px;padding:12px}
-.dt-status small{display:block;font-weight:800;font-size:14px;margin-bottom:8px}
-.dt-srow{display:flex;gap:8px;align-items:stretch}
-.dt-srow select{flex:1;min-width:0;margin:0;border-radius:12px;padding:12px;background:#fff}
-.dt-srow button{width:auto;margin:0;padding:0 14px;background:#1d4ed8;color:#fff;border-radius:12px;font-weight:800}
-.dt-acts{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px;margin:10px}
-.dt-acts button{width:100%;margin:0;padding:13px 4px;font-size:14px;border-radius:12px;background:#fff;color:#111;border:1px solid #ddd}
-.dt-acts .dt-share{background:#f3c846;border-color:#f3c846}
-.dt-extra{margin:0 10px 12px;display:flex;flex-direction:column;gap:6px}
-.dt-extra button{margin:0}</style>
+</style>
 </head>
 <body>
 <div class="topbar">
@@ -316,6 +276,7 @@ M|96|70"></textarea>
   </div>
 
   <div id="vDetail" style="display:none">
+  <button class="sec" data-back>← Back to orders</button>
   <div id="dbox"></div>
   </div>
 
@@ -488,7 +449,7 @@ const shrink=file=>fitImage(file,720,960,.82);
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
   if(r.ok){
-    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";history.replaceState(null,"");showView("home",true);
+    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";showView("home");
     await load();   // products first, so order lines can show product codes
     loadOrders();
   }
@@ -793,90 +754,17 @@ function orderCard(o){
   </div>`;
 }
 let ODET=null;   // id of the order shown on its own page (null = list)
-// View opens the order on its own page (its Back button returns to the list)
+// View opens the order on a new page (Back returns to the list)
 function viewOrder(id){
   ODET=id;
-  history.replaceState({av:"orders"},"");   // so Back returns to the list
+  history.replaceState({av:"orders"},"");
   showView("detail");
   renderDetail();
 }
 function renderDetail(){
   const o=ORD[ODET];
-  if(ODET===null||!o){$("#dbox").innerHTML='<p class="muted" style="padding:14px">Order not found.</p>';return;}
-  const items=o.items||[];
-  const sub=Number(o.subtotal)||items.reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-  const disc=Number(o.discount)||0, del=Number(o.delivery_fee)||0, cod=Number(o.cod_fee)||0, gw=Number(o.gift_wrap)||0;
-  const label=(STATUSES.find(x=>x[0]===o.status)||[])[1]||o.status;
-  const initial=esc(String(o.name||"?").trim().charAt(0).toUpperCase());
-  const dateTxt=o.created?new Date(o.created).toLocaleDateString("en-GB",{timeZone:"Asia/Colombo",day:"2-digit",month:"short",year:"numeric"}):"";
-  const timeTxt=o.created?new Date(o.created).toLocaleTimeString("en-US",{timeZone:"Asia/Colombo",hour:"2-digit",minute:"2-digit",hour12:true}):"";
-  const needSlip=(o.payment||"cod")!=="cod"&&o.pay_state!=="paid";
-  $("#dbox").innerHTML=`<div class="dt">
-    <div class="dt-bar">
-      <button class="dt-back" onclick="goBackFromOrder()">‹ &nbsp;Back to Orders</button>
-      <button class="dt-edit" onclick="editFromDetail(${o.id})">✎ Edit Order</button>
-    </div>
-    <div class="dt-cust">
-      <div class="dt-av">${initial}</div>
-      <div class="dt-cm">
-        <span class="dt-code">${esc(o.code)}</span>
-        <b>${esc(o.name)}</b>
-        <div>📞 ${esc(o.phone1)}${o.phone2?" · "+esc(o.phone2):""}</div>
-        <div>📍 ${esc(o.address||"")}</div>
-        ${o.district&&!String(o.address||"").includes(o.district)?`<div>${esc(o.district)}</div>`:""}
-      </div>
-      <div class="dt-date">Order Date<b>${esc(dateTxt)}</b>${esc(timeTxt)}
-        <a class="dt-call" href="tel:+${waNum(o.phone1)}">📞 Call</a></div>
-    </div>
-    <div class="dt-sec">📦 Ordered Items <span>(${items.length})</span></div>
-    <div>${items.map((i,k)=>`<div class="dt-it">
-        <div class="dt-th">${itemThumb(i)}</div>
-        <div style="min-width:0"><b><span class="dt-ic">${esc(o.code)}-${k+1}</span> ${esc(i.name)}</b>
-          <div class="muted" style="margin-top:4px">${i.size?"Size: "+esc(i.size):""}${i.size&&i.color?" · ":""}${i.color?"Color: "+esc(i.color):""}</div>
-          <span class="dt-q">Qty: ${Number(i.qty)||1}</span></div>
-        <div class="dt-ip">Rs. ${money((Number(i.price)||0)*(Number(i.qty)||1))}</div>
-      </div>`).join("")}</div>
-    <div class="dt-sum">
-      <div><span>Subtotal</span><b>Rs. ${money(sub)}</b></div>
-      <div><span>Delivery Charge</span><b>Rs. ${money(del)}</b></div>
-      ${cod?`<div><span>Cash on delivery fee</span><b>Rs. ${money(cod)}</b></div>`:""}
-      ${gw?`<div><span>Gift wrap</span><b>Rs. ${money(gw)}</b></div>`:""}
-      <div><span>Discount</span><b>${disc?"− Rs. "+money(disc):"Rs. 0"}</b></div>
-      <div class="dt-tot"><span>Total Amount</span><b>Rs. ${money(o.total)}</b></div>
-    </div>
-    <div class="dt-pair">
-      <div><small>Payment Method</small><b>${esc(payLine(o))}</b></div>
-      <div><small>Delivery</small><b>Within 5 working days</b><span>by ${esc(deliveryText(o.created))}</span></div>
-    </div>
-    ${giftHtml(o)?`<div style="margin:0 10px">${giftHtml(o)}</div>`:""}
-    <div class="dt-status">
-      <small>🔄 Update Order Status</small>
-      <div class="dt-srow">
-        <select id="dStatus">${STATUSES.map(([v,l])=>`<option value="${v}"${o.status===v?" selected":""}>${l}</option>`).join("")}</select>
-        <button onclick="setOrderStatus(${o.id},document.getElementById('dStatus').value)">✓ Update</button>
-      </div>
-      <div class="muted" style="margin-top:6px;font-size:12px">Current: ${esc(label)}</div>
-    </div>
-    <div class="dt-extra">
-      ${Number(o.slips)>0?`<button class="sec" style="border-color:#c9961a;background:#fdf5d8" onclick="viewSlip(${o.id})">📎 View slip (${Number(o.slips)})</button>`:""}
-      ${needSlip?`<button class="sec" onclick="markPaid(${o.id})">Slip ආවා ✓ · Mark as paid</button>`:""}
-      <a class="wa" href="https://wa.me/${waNum(o.phone1)}?text=${encodeURIComponent("Hi "+o.name+", your Max Style order "+o.code+" is now: "+label+". Thank you!")}" target="_blank" rel="noopener">WhatsApp customer</a>
-      <div class="brow" style="margin-top:0"><button class="edt" onclick="editFromDetail(${o.id})">Edit</button><button class="del" onclick="delOrder(${o.id})">Delete</button></div>
-    </div>
-    <div class="dt-acts">
-      <button onclick="printBill(${o.id})">👁 View Bill</button>
-      <button onclick="printBill(${o.id},true)">🖨 Print Bill</button>
-      <button class="dt-share" onclick="shareOrder(${o.id})">↗ Share Order</button>
-    </div>
-  </div>`;
-}
-function goBackFromOrder(){ if(history.state&&history.state.av)history.back(); else showView("orders"); }
-function editFromDetail(id){ showView("orders"); editOrder(id); }
-function shareOrder(id){
-  const o=ORD[id];if(!o)return;
-  const txt="MAX STYLE order "+o.code+" · "+o.name+" · Rs. "+money(o.total);
-  if(navigator.share)navigator.share({title:o.code,text:txt}).catch(()=>{});
-  else window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
+  if(ODET===null||!o){$("#dbox").innerHTML='<p class="muted">Order not found.</p>';return;}
+  $("#dbox").innerHTML=`<div class="box">${orderCard(o)}</div>`;
 }
 function goOPage(n){OPAGE=n;renderOrders();$("#olist").scrollIntoView({block:"start"});}
 function setOFil(v){OFIL=v;OPAGE=1;renderOrders();}
@@ -979,7 +867,7 @@ async function loadStats(){
 $("#sreload").onclick=loadStats;
 
 // Customer bill for one order (opens in a new tab, then Print)
-function printBill(id,autoPrint){
+function printBill(id){
   const o=ORD[id];if(!o)return;
   const rows=o.items.map(i=>`<tr><td>${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?"<br><small>"+esc(i.color)+"</small>":""}</td><td>${i.qty}</td><td style="text-align:right">${i.price?"Rs. "+money(i.price*i.qty):""}</td></tr>`).join("");
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill ${esc(o.code)}</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:20px;color:#111}h1{font-size:20px;margin:0}.sub{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}td,th{padding:6px 0;border-bottom:1px solid #eee;text-align:left}.tot{font-size:18px;font-weight:700;text-align:right;margin-top:10px}.btn{margin-top:20px;padding:12px;width:100%;background:#111;color:#f3d27a;border:0;border-radius:8px;font-weight:700;font-size:16px}@media print{.btn{display:none}}</style></head><body>
@@ -994,7 +882,6 @@ function printBill(id,autoPrint){
   const w=window.open("","_blank");
   if(!w){alert("Pop-up blocked. Allow pop-ups to print the bill.");return;}
   w.document.write(html);w.document.close();
-  if(autoPrint)setTimeout(()=>{try{w.print();}catch(e){}},400);
 }
 
 // ---- Home banners (slideshow on the shop's home page) ----
@@ -1144,28 +1031,6 @@ $("#save").onclick=async()=>{
 if(pw)login();
 // Lets the admin page be installed as an app on the phone
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
-</script>
-<script>
-// Pull down at the top = refresh the data (orders / products / stats), not a browser reload
-let _ty0=0,_pull=false,_busy=false;
-const pullTip=document.createElement("div");
-pullTip.style.cssText="position:fixed;top:0;left:50%;transform:translate(-50%,-100%);background:#111;color:#f3c846;font-weight:700;font-size:14px;padding:8px 16px;border-radius:0 0 12px 12px;z-index:90;transition:transform .2s";
-pullTip.textContent="↻ Refreshing…";
-document.addEventListener("DOMContentLoaded",()=>document.body.appendChild(pullTip));
-document.addEventListener("touchstart",e=>{_ty0=e.touches[0].clientY;_pull=window.scrollY<=0&&!_busy;},{passive:true});
-document.addEventListener("touchmove",e=>{if(_pull&&e.cancelable&&e.touches[0].clientY-_ty0>0)e.preventDefault();},{passive:false});
-document.addEventListener("touchend",async e=>{
-  if(!_pull)return;_pull=false;
-  const dy=e.changedTouches[0].clientY-_ty0;
-  if(dy<70||!pw)return;
-  _busy=true;pullTip.style.transform="translate(-50%,0)";
-  try{
-    await load();
-    await loadOrders();
-    if($("#vStats").style.display==="block")await loadStats();
-  }catch(err){}
-  setTimeout(()=>{pullTip.style.transform="translate(-50%,-100%)";_busy=false;},400);
-},{passive:true});
 </script>
 </body>
 </html>
