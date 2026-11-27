@@ -102,7 +102,8 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .o2st span{font-size:13px;flex:none;pointer-events:none}
 .o2st u{text-decoration:none;font-size:10px;flex:none;pointer-events:none}
 .o2tot{text-align:right;font-weight:800;font-size:15px}
-.o2btn{display:flex;gap:5px}
+.o2btn{display:flex;gap:6px;margin-top:auto;align-items:stretch}
+.o2btn .ov{flex:1.5!important;padding:12px 0!important;font-size:15px!important;font-weight:800;border-radius:11px!important;background:#1d4ed8!important;color:#fff!important;border:0!important}
 .o2btn button{flex:1;margin:0;padding:6px 0;font-size:12px;border-radius:9px;background:#eaf2ff;color:#1d4ed8;border:1px solid #b9d2ff;width:auto}
 .o2d{border-top:1px dashed #ddd;margin-top:10px;padding-top:8px;font-size:13px}
 .o2d ul{padding-left:18px;margin:6px 0}
@@ -741,7 +742,7 @@ function orderCard(o){
         <div class="o2st"><span>${st[0]}</span>
           <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select><u>▼</u></div>
         <div class="o2tot">Rs. ${money(o.total)}</div>
-        <div class="o2btn"><button onclick="toggleO(${o.id})">${open?"▲ Hide":"👁 View"}</button><button onclick="printBill(${o.id})">🖨 Print</button></div>
+        <div class="o2btn"><button class="ov" onclick="toggleO(${o.id})">${open?"▲ Hide":"👁 View"}</button><button onclick="printBill(${o.id})">🖨 Print</button></div>
       </div>
     </div>${details}
   </div>`;
