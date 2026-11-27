@@ -275,6 +275,11 @@ M|96|70"></textarea>
   </div>
   </div>
 
+  <div id="vDetail" style="display:none">
+  <button class="sec" data-back>← Back to orders</button>
+  <div id="dbox"></div>
+  </div>
+
   <div id="vStats" style="display:none">
   <button class="sec" data-back>← Back</button>
   <div class="box">
@@ -662,6 +667,7 @@ async function loadOrders(){
   renderOrders();
 }
 function renderOrders(){
+  if(ODET!==null)renderDetail();
   const base=inRange();
   const live=base.filter(o=>o.status!=="cancelled");
   const sales=live.reduce((s,o)=>s+(Number(o.total)||0),0);
@@ -712,7 +718,7 @@ function orderCard(o){
   const qty=o.items.reduce((s,i)=>s+(Number(i.qty)||0),0);
   const th=o.items.slice(0,2).map(itemThumb);
   const extra=o.items.length>2?`<div class="more">+${o.items.length-2}</div>`:"";
-  const open=!!OEXP[o.id];
+  const open=ODET===o.id;   // the open order is shown on its own page
   const details=open?`<div class="o2d">
       <div class="muted">Delivery within 5 working days, by ${esc(deliveryText(o.created))}</div>
       ${o.phone2?`<div class="muted">Alt phone: ${esc(o.phone2)}</div>`:""}
@@ -742,12 +748,24 @@ function orderCard(o){
         <div class="o2st"><span>${st[0]}</span>
           <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select><u>▼</u></div>
         <div class="o2tot">Rs. ${money(o.total)}</div>
-        <div class="o2btn"><button class="ov" onclick="toggleO(${o.id})">${open?"▲ Hide":"👁 View"}</button><button onclick="printBill(${o.id})">🖨 Print</button></div>
+        <div class="o2btn">${open?"":`<button class="ov" onclick="viewOrder(${o.id})">👁 View</button>`}<button onclick="printBill(${o.id})">🖨 Print</button></div>
       </div>
     </div>${details}
   </div>`;
 }
-function toggleO(id){OEXP[id]=!OEXP[id];renderOrders();}
+let ODET=null;   // id of the order shown on its own page (null = list)
+// View opens the order on a new page (Back returns to the list)
+function viewOrder(id){
+  ODET=id;
+  history.replaceState({av:"orders"},"");
+  showView("detail");
+  renderDetail();
+}
+function renderDetail(){
+  const o=ORD[ODET];
+  if(ODET===null||!o){$("#dbox").innerHTML='<p class="muted">Order not found.</p>';return;}
+  $("#dbox").innerHTML=`<div class="box">${orderCard(o)}</div>`;
+}
 function goOPage(n){OPAGE=n;renderOrders();$("#olist").scrollIntoView({block:"start"});}
 function setOFil(v){OFIL=v;OPAGE=1;renderOrders();}
 $("#o2q").oninput=e=>{OQ=e.target.value;OPAGE=1;renderOrders();};
@@ -964,7 +982,8 @@ function showView(v,fromHistory){
   $("#vOrders").style.display=v==="orders"?"block":"none";
   $("#vStats").style.display=v==="stats"?"block":"none";
   $("#vBanners").style.display=v==="banners"?"block":"none";
-  const act=v==="products"?"cats":v;
+  $("#vDetail").style.display=v==="detail"?"block":"none";
+  const act=v==="products"?"cats":v==="detail"?"orders":v;
   document.querySelectorAll(".bnav button[data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===act));
   window.scrollTo(0,0);
   if(v==="cats"){editId=null;renderCats();}
