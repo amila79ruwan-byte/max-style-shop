@@ -177,9 +177,54 @@ html,body{overscroll-behavior:none}
 .dt-acts .dt-share{background:#f3c846;border-color:#f3c846}
 .dt-extra{margin:0 10px 12px;display:flex;flex-direction:column;gap:6px}
 .dt-extra button{margin:0}
+.dt-chip{display:inline-block;background:#eee;border-radius:999px;padding:4px 12px;font-size:13px;margin-top:2px}
+.dt-sec,.dt-bar{background:linear-gradient(90deg,#0b0b0b 55%,#2a1f05)!important}
 /* order page: keep the last buttons clear of the bottom menu when scrolled to the end */
-#vDetail .box{margin-bottom:40px}
-#vDetail .dt-acts{margin-bottom:18px}</style>
+#vDetail .box{margin:0 -14px 40px;border-radius:18px 18px 0 0;padding:10px}
+#vDetail .dt-acts{margin-bottom:18px}
+/* ---- Order page: fit any phone width (320-430px), no horizontal scroll ---- */
+#vDetail, #vDetail *{min-width:0;box-sizing:border-box}
+#vDetail{overflow-wrap:anywhere}
+#vDetail .dt-bar{flex-wrap:nowrap}
+#vDetail .dt-bar button{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+#vDetail .dt-cm b,#vDetail .dt-it b,#vDetail .dt-cm div{overflow-wrap:anywhere;word-break:break-word}
+#vDetail .dt-ip{white-space:normal;text-align:right}
+#vDetail .dt-srow select{font-size:15px}
+#vDetail .dt-sum div{gap:8px}
+#vDetail .dt-sum div span{min-width:0;overflow-wrap:anywhere}
+#vDetail .dt-sum div b{white-space:nowrap;text-align:right}
+@media (max-width:400px){
+  #vDetail .box{margin:0 -10px 40px;padding:8px}
+  #vDetail .dt-bar{padding:8px}
+  #vDetail .dt-bar button{padding:8px 10px;font-size:14px}
+  #vDetail .dt-cust{grid-template-columns:58px minmax(0,1fr);gap:8px;padding:10px;margin:8px 4px}
+  #vDetail .dt-av{width:58px;height:58px;font-size:22px}
+  #vDetail .dt-date{grid-column:1 / -1;border-left:0;border-top:1px solid #f3c846;padding:8px 0 0;text-align:left;min-width:0}
+  #vDetail .dt-date .dt-call{display:inline-block;width:auto;margin:6px 0 0;padding:8px 16px}
+  #vDetail .dt-sec{margin:8px 4px;padding:9px 12px;font-size:15px}
+  #vDetail .dt-it{grid-template-columns:64px minmax(0,1fr);gap:8px;padding:8px 4px}
+  #vDetail .dt-th{width:64px;height:76px}
+  #vDetail .dt-ip{grid-column:2;text-align:left;font-size:14px}
+  #vDetail .dt-sum{margin:8px 4px;padding:4px 10px}
+  #vDetail .dt-tot{font-size:16px!important}
+  #vDetail .dt-pair{grid-template-columns:1fr;margin:8px 4px;padding:10px}
+  #vDetail .dt-status{margin:8px 4px;padding:10px}
+  #vDetail .dt-srow{flex-wrap:wrap}
+  #vDetail .dt-srow select{flex:1 1 100%}
+  #vDetail .dt-srow button{flex:1 1 100%;padding:12px}
+  #vDetail .dt-extra{margin:0 4px 10px}
+  #vDetail .dt-acts{grid-template-columns:1fr 1fr;margin:8px 4px 18px;gap:6px}
+  #vDetail .dt-acts button{font-size:13px;padding:11px 4px}
+  #vDetail .dt-acts .dt-share{grid-column:1 / -1}
+}
+@media (max-width:359px){
+  #vDetail .dt-bar button{font-size:13px;padding:7px 8px}
+  #vDetail .dt-cust{grid-template-columns:50px minmax(0,1fr)}
+  #vDetail .dt-av{width:50px;height:50px;font-size:20px}
+  #vDetail .dt-cm b{font-size:15px}
+  #vDetail .dt-acts button{font-size:12px}
+}
+</style>
 </head>
 <body>
 <div class="topbar">
@@ -840,16 +885,16 @@ function renderDetail(){
         <div class="dt-ip">Rs. ${money((Number(i.price)||0)*(Number(i.qty)||1))}</div>
       </div>`).join("")}</div>
     <div class="dt-sum">
-      <div><span>Subtotal</span><b>Rs. ${money(sub)}</b></div>
-      <div><span>Delivery Charge</span><b>Rs. ${money(del)}</b></div>
-      ${cod?`<div><span>Cash on delivery fee</span><b>Rs. ${money(cod)}</b></div>`:""}
-      ${gw?`<div><span>Gift wrap</span><b>Rs. ${money(gw)}</b></div>`:""}
-      <div><span>Discount</span><b>${disc?"− Rs. "+money(disc):"Rs. 0"}</b></div>
-      <div class="dt-tot"><span>Total Amount</span><b>Rs. ${money(o.total)}</b></div>
+      <div><span>🛒 Subtotal</span><b>Rs. ${money(sub)}</b></div>
+      <div><span>🚚 Delivery Charge</span><b>Rs. ${money(del)}</b></div>
+      ${cod?`<div><span>💵 Cash on delivery fee</span><b>Rs. ${money(cod)}</b></div>`:""}
+      ${gw?`<div><span>🎁 Gift wrap</span><b>Rs. ${money(gw)}</b></div>`:""}
+      <div><span>🏷️ Discount</span><b>${disc?"− Rs. "+money(disc):"Rs. 0"}</b></div>
+      <div class="dt-tot"><span>💰 Total Amount</span><b>Rs. ${money(o.total)}</b></div>
     </div>
     <div class="dt-pair">
-      <div><small>Payment Method</small><b>${esc(payLine(o))}</b></div>
-      <div><small>Delivery</small><b>Within 5 working days</b><span>by ${esc(deliveryText(o.created))}</span></div>
+      <div><small>💳 Payment Method</small><b class="dt-chip">${esc(payLine(o))}</b></div>
+      <div><small>🛵 Delivery Courier</small><b>Within 5 working days</b><span>by ${esc(deliveryText(o.created))}</span></div>
     </div>
     ${giftHtml(o)?`<div style="margin:0 10px">${giftHtml(o)}</div>`:""}
     <div class="dt-status">
