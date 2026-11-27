@@ -112,10 +112,37 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .o2pg button{width:auto;margin:0;padding:6px 11px;font-size:13px;background:#fff;color:#111;border:1px solid #ddd;border-radius:8px}
 .o2pg button.on{background:#f3c846;border-color:#f3c846;font-weight:800}
 .o2pg button:disabled{opacity:.4}
+/* ---- App top bar + bottom nav ---- */
+body{padding-bottom:88px}
+.topbar{position:sticky;top:0;z-index:50;background:#0b0b0b;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin:-14px -14px 14px}
+.brand{display:flex;align-items:center;gap:8px}
+.brand .bag{width:34px;height:34px;color:#f3c846;flex:none}
+.brand b{display:block;color:#f3c846;font-size:18px;letter-spacing:.5px;line-height:1.1}
+.brand small{display:block;color:#ddd;font-size:11px}
+.tright{display:flex;align-items:center;gap:14px}
+.bell{position:relative;font-size:20px;line-height:1}
+.bell i{position:absolute;top:-7px;right:-9px;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:700;border-radius:999px;padding:1px 6px}
+.bell i:empty{display:none}
+.av{width:34px;height:34px;border-radius:50%;background:#f3c846;color:#111;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:60;max-width:560px;margin:auto;background:#0b0b0b;display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+.bnav button{background:transparent;color:#aaa;width:auto;margin:0;padding:6px 2px;font-size:11px;font-weight:600;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:14px;position:relative}
+.bnav button i{font-style:normal;font-size:20px;line-height:1}
+.bnav button.on{background:#f3c846;color:#111}
+.bnav .nb{position:absolute;top:2px;left:50%;margin-left:8px;background:#e11d48;color:#fff;font-size:10px;font-style:normal;font-weight:700;border-radius:999px;padding:0 5px;line-height:16px}
+.bnav .nb:empty{display:none}
 </style>
 </head>
 <body>
-<h1>Max Style Admin</h1>
+<div class="topbar">
+  <div class="brand">
+    <svg class="bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+    <div><b>MAX STYLE</b><small>Shop Smart, Live Better</small></div>
+  </div>
+  <div class="tright">
+    <span class="bell">🔔<i id="bellN"></i></span>
+    <div class="av">A</div>
+  </div>
+</div>
 
 <div class="box" id="login">
   <input id="pw" type="password" placeholder="Admin password">
@@ -272,6 +299,14 @@ M|96|70"></textarea>
   </div>
 </div>
 
+<nav class="bnav" id="bnav" style="display:none">
+  <button data-v="stats"><i>📊</i>Dashboard</button>
+  <button data-v="orders"><i>🛒</i>Orders<span class="nb" id="navN"></span></button>
+  <button data-v="cats"><i>📦</i>Products</button>
+  <button data-go="/pinreset.html"><i>👥</i>Customers</button>
+  <button data-v="home"><i>⚙️</i>Settings</button>
+</nav>
+
 <script>
 const $=s=>document.querySelector(s);
 let pw=sessionStorage.getItem("pw")||"", image="", editId=null, items=[], curCat="women";
@@ -401,7 +436,7 @@ const shrink=file=>fitImage(file,720,960,.82);
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
   if(r.ok){
-    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";showView("home");
+    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";showView("home");
     await load();   // products first, so order lines can show product codes
     loadOrders();
   }
@@ -595,6 +630,9 @@ function renderOrders(){
   const sales=live.reduce((s,o)=>s+(Number(o.total)||0),0);
   const cust=new Set(base.map(o=>String(o.phone1||o.name).replace(/\D/g,"")||o.name)).size;
   const pend=base.filter(o=>o.status!=="delivered"&&o.status!=="cancelled").length;
+  const bn=OALL.filter(o=>o.status!=="delivered"&&o.status!=="cancelled").length;
+  $("#bellN").textContent=bn||"";
+  $("#navN").textContent=bn||"";
   $("#ocount").textContent="Manage all customer orders";
   $("#o2stats").innerHTML=
     `<div class="o2s y"><i>🛒</i><div><small>Total Orders</small><b>${money(base.length)}</b></div></div>`+
@@ -875,6 +913,8 @@ function showView(v,fromHistory){
   $("#vOrders").style.display=v==="orders"?"block":"none";
   $("#vStats").style.display=v==="stats"?"block":"none";
   $("#vBanners").style.display=v==="banners"?"block":"none";
+  const act=v==="products"?"cats":v;
+  document.querySelectorAll(".bnav button[data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===act));
   window.scrollTo(0,0);
   if(v==="cats"){editId=null;renderCats();}
   if(v==="stats")loadStats();
@@ -890,6 +930,12 @@ $("#gStats").onclick=()=>showView("stats");
 $("#gBanners").onclick=()=>showView("banners");
 $("#gPay").onclick=()=>{location.href="/paymethods.html";};
 $("#gPin").onclick=()=>{location.href="/pinreset.html";};
+$(".bnav").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.go){location.href=b.dataset.go;return;}
+  history.replaceState(null,"");   // tab switch: back button goes home, not through every tab
+  showView(b.dataset.v);
+});
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>{
   if(history.state&&history.state.av)history.back();else showView("home");
 });
