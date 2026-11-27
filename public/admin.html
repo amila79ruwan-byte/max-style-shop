@@ -756,10 +756,10 @@ function orderCard(o){
   </div>`;
 }
 let ODET=null;   // id of the order shown on its own page (null = list)
-// View opens the order on its own page (its Back button returns to the list)
+// View opens the order on a new page (Back returns to the list)
 function viewOrder(id){
   ODET=id;
-  history.replaceState({av:"orders"},"");   // so Back returns to the list
+  history.replaceState({av:"orders"},"");
   showView("detail");
   renderDetail();
 }
@@ -1033,12 +1033,6 @@ $("#save").onclick=async()=>{
 if(pw)login();
 // Lets the admin page be installed as an app on the phone
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
-</script>
-<script>
-// A pull down while the page is at the top would reload the admin (pull-to-refresh) and bring back an old screen. Block it.
-let _ty0=0;
-document.addEventListener("touchstart",e=>{_ty0=e.touches[0].clientY;},{passive:true});
-document.addEventListener("touchmove",e=>{if(window.scrollY<=0&&e.touches[0].clientY-_ty0>0&&e.cancelable)e.preventDefault();},{passive:false});
 </script>
 </body>
 </html>
