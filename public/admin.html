@@ -449,7 +449,7 @@ const shrink=file=>fitImage(file,720,960,.82);
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
   if(r.ok){
-    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";showView("home");
+    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";history.replaceState(null,"");showView("home",true);
     await load();   // products first, so order lines can show product codes
     loadOrders();
   }
