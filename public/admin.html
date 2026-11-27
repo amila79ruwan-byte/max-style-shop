@@ -136,8 +136,6 @@ body{padding-bottom:88px}
 .o2fl{font-size:12px;font-weight:700;color:#666;margin:8px 0 4px}
 #o2fpanel select{width:100%;margin:0 0 4px;padding:9px 10px;font-size:14px;border-radius:10px;background:#fff}
 #ocus input{margin:0;flex:1;min-width:0}
-/* No pull-to-refresh / edge overscroll: a pull on the screen should not reload or leave the page */
-html,body{overscroll-behavior:none}
 </style>
 </head>
 <body>
@@ -451,7 +449,7 @@ const shrink=file=>fitImage(file,720,960,.82);
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
   if(r.ok){
-    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";history.replaceState(null,"");showView("home",true);
+    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";showView("home");
     await load();   // products first, so order lines can show product codes
     loadOrders();
   }
