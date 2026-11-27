@@ -65,6 +65,53 @@ button.edt{background:#c9961a;color:#111;width:auto;padding:8px 12px;margin:0}
 .vrow span{flex:1;font-size:14px}
 .vrow input{width:90px;margin:0;text-align:center}
 #vtot{margin-top:6px;font-size:13px;color:#555}
+
+/* ---- Orders list (card layout) ---- */
+.o2h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.o2h b{font-size:19px}
+.o2h small{display:block;color:#666;font-size:12px;font-weight:400}
+.o2h select{width:auto;margin:0;padding:8px 10px;font-size:13px;border-radius:10px;background:#fff}
+.o2stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}
+.o2s{border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.o2s i{font-style:normal;font-size:26px;line-height:1}
+.o2s small{display:block;font-size:12px;opacity:.85}
+.o2s b{display:block;font-size:17px;line-height:1.25}
+.o2s.y{background:linear-gradient(135deg,#fbe38a,#f3c846);color:#111}
+.o2s.g{background:linear-gradient(135deg,#1f9d55,#0f7a3e);color:#fff}
+.o2s.p{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff}
+.o2s.o{background:linear-gradient(135deg,#fbbf4a,#f59e0b);color:#111}
+.o2bar{display:flex;gap:8px;margin-bottom:8px}
+.o2bar input{margin:0;flex:1;min-width:0;border-radius:12px;background:#f1f1f1;padding:10px 12px}
+.o2bar button{width:auto;margin:0;padding:10px 14px;background:#fff;color:#111;border:1px solid #ddd;border-radius:12px}
+#o2fpanel{display:none;margin-bottom:8px}
+.o2c{border:2px solid var(--c,#f0c63a);border-radius:14px;padding:10px;margin-bottom:10px;background:#fff}
+.o2g{display:grid;grid-template-columns:82px minmax(0,1fr) 118px;gap:8px;align-items:stretch}
+.o2l{display:flex;flex-direction:column;align-items:center;gap:5px}
+.o2code{background:#e6ebff;color:#1e3a8a;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800;white-space:nowrap}
+.o2cnt{background:#fde68a;color:#7a5600;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap}
+.o2th{display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.o2th img,.o2th .np{width:36px;height:44px;object-fit:cover;border-radius:6px;background:#eee;display:block}
+.o2th.one img,.o2th.one .np{width:58px;height:66px}
+.o2th .more{width:36px;height:44px;border-radius:6px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#555}
+.o2m{border-left:1px solid #eee;border-right:1px solid #eee;padding:0 8px;font-size:12px;line-height:1.4;min-width:0;word-break:break-word}
+.o2m b{font-size:13px;display:block;margin-bottom:2px}
+.o2m div{margin-bottom:3px;color:#444}
+.o2r{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.o2st{display:flex;align-items:center;gap:4px;border-radius:999px;padding:0 8px;border:1px solid var(--c);background:var(--bg);color:var(--fg);position:relative}
+.o2st select{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font-weight:800;font-size:12px;padding:7px 0;margin:0;width:100%;min-width:0}
+.o2st span{font-size:13px;flex:none;pointer-events:none}
+.o2st u{text-decoration:none;font-size:10px;flex:none;pointer-events:none}
+.o2tot{text-align:right;font-weight:800;font-size:15px}
+.o2btn{display:flex;gap:5px}
+.o2btn button{flex:1;margin:0;padding:6px 0;font-size:12px;border-radius:9px;background:#eaf2ff;color:#1d4ed8;border:1px solid #b9d2ff;width:auto}
+.o2d{border-top:1px dashed #ddd;margin-top:10px;padding-top:8px;font-size:13px}
+.o2d ul{padding-left:18px;margin:6px 0}
+.o2d li{margin-bottom:4px}
+.o2pg{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;margin-top:4px}
+.o2pg div{display:flex;gap:5px}
+.o2pg button{width:auto;margin:0;padding:6px 11px;font-size:13px;background:#fff;color:#111;border:1px solid #ddd;border-radius:8px}
+.o2pg button.on{background:#f3c846;border-color:#f3c846;font-weight:800}
+.o2pg button:disabled{opacity:.4}
 </style>
 </head>
 <body>
@@ -166,9 +213,24 @@ M|96|70"></textarea>
   </div>
 
   <div class="box">
-    <div class="orow"><b>Orders</b><button class="sec" id="oreload" style="width:auto;margin:0;padding:8px 12px">Refresh</button></div>
-    <div class="muted" id="ocount" style="margin:6px 0 8px"></div>
+    <div class="o2h">
+      <div><b>Orders Management</b><small id="ocount">Manage all customer orders</small></div>
+      <select id="o2range">
+        <option value="0">Today</option>
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="all">All time</option>
+      </select>
+    </div>
+    <div class="o2stats" id="o2stats"></div>
+    <div class="o2bar">
+      <input id="o2q" type="search" placeholder="🔍 Search orders…">
+      <button id="o2f">Filter</button>
+    </div>
+    <div class="chips" id="o2fpanel"></div>
     <div id="olist"></div>
+    <div class="o2pg" id="o2pager"></div>
+    <button class="sec" id="oreload" style="margin:12px 0 0">Refresh</button>
   </div>
 
   <div class="box">
@@ -485,51 +547,127 @@ function giftHtml(o){
     ${o.gift_msg?'<br><b>Message:</b> “'+esc(o.gift_msg)+'”':""}
   </div>`;
 }
+// ---- Orders list: stats, search, filter, cards, pages ----
+// status -> [icon, border, background, text colour]
+const OST={
+  received:["📥","#f0c63a","#fff3c4","#7a5600"],
+  confirmed:["⚙️","#7aa7ff","#e3edff","#1d4ed8"],
+  packed:["📦","#f5a742","#ffe9cf","#9a4d00"],
+  out:["🚚","#b496f5","#efe7ff","#5b21b6"],
+  delivered:["✅","#6fd08c","#dcf5e3","#15803d"],
+  cancelled:["❌","#f19a9a","#fde2e2","#b91c1c"]
+};
+const OPER=5;
+let OALL=[], OPAGE=1, OQ="", OFIL="all", ORNG="30", OEXP={};
+// Product id of an order line (saved id, or found by name) -> used for the little photo
+function itemPid(i){
+  let id=i.id||i.product_id||i.productId;
+  if(!id){
+    const nm=String(i.name||"").trim().toLowerCase();
+    const p=items.find(x=>String(x.name).trim().toLowerCase()===nm);
+    if(p)id=p.id;
+  }
+  return id||0;
+}
+function itemThumb(i){
+  const id=itemPid(i),p=id?items.find(x=>x.id==id):null;
+  return p&&p.has_image?`<img src="/api/image?id=${p.id}&v=${p.updated}" alt="" loading="lazy">`:'<div class="np"></div>';
+}
+const shortDt=t=>t?new Date(t).toLocaleString("en-GB",{timeZone:"Asia/Colombo",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true}):"";
+function inRange(){
+  if(ORNG==="all")return OALL;
+  if(ORNG==="0"){const t=dayKey(Date.now());return OALL.filter(o=>dayKey(o.created)===t);}
+  const lim=Date.now()-Number(ORNG)*864e5;
+  return OALL.filter(o=>new Date(o.created).getTime()>=lim);
+}
 async function loadOrders(){
   const r=await fetch("/api/orders",{headers:hdr()});
   if(!r.ok){$("#olist").innerHTML='<p class="msg">Could not load orders.</p>';return;}
   const orders=await r.json();
   ORD={};
   orders.forEach(o=>ORD[o.id]=o);
-  $("#ocount").textContent=orders.length+" orders";
-
-  // Per-day count and money (cancelled orders are not counted in the money).
-  const days={};
-  orders.forEach(o=>{
-    const k=dayKey(o.created);
-    const d=days[k]||(days[k]={n:0,sum:0});
-    d.n++;if(o.status!=="cancelled")d.sum+=Number(o.total)||0;
-  });
-
-  let lastDay="";
-  $("#olist").innerHTML=orders.length?orders.map(o=>{
-    const label=(STATUSES.find(s=>s[0]===o.status)||[])[1]||o.status;
-    const msg="Hi "+o.name+", your Max Style order "+o.code+" is now: "+label+". Thank you!";
-    const k=dayKey(o.created);
-    let head="";
-    if(k!==lastDay){
-      lastDay=k;
-      head=`<div class="dayh"><b>${esc(dayLabel(o.created))}</b><span>Orders ${days[k].n} · Rs. ${money(days[k].sum)}</span></div>`;
-    }
-    return head+`<div class="ocard">
-      <div class="orow"><span class="code">${esc(o.code)}</span><span class="muted">${esc(dt(o.created))}</span></div>
+  OALL=orders;
+  renderOrders();
+}
+function renderOrders(){
+  const base=inRange();
+  const live=base.filter(o=>o.status!=="cancelled");
+  const sales=live.reduce((s,o)=>s+(Number(o.total)||0),0);
+  const cust=new Set(base.map(o=>String(o.phone1||o.name).replace(/\D/g,"")||o.name)).size;
+  const pend=base.filter(o=>o.status!=="delivered"&&o.status!=="cancelled").length;
+  $("#ocount").textContent="Manage all customer orders";
+  $("#o2stats").innerHTML=
+    `<div class="o2s y"><i>🛒</i><div><small>Total Orders</small><b>${money(base.length)}</b></div></div>`+
+    `<div class="o2s g"><i>💰</i><div><small>Total Sales</small><b>Rs. ${money(sales)}</b></div></div>`+
+    `<div class="o2s p"><i>👥</i><div><small>Customers</small><b>${money(cust)}</b></div></div>`+
+    `<div class="o2s o"><i>📦</i><div><small>Pending</small><b>${money(pend)}</b></div></div>`;
+  // status chips (with counts)
+  const cnt={};base.forEach(o=>cnt[o.status]=(cnt[o.status]||0)+1);
+  $("#o2fpanel").innerHTML=[["all","All"],...STATUSES].map(([v,l])=>`<button class="${OFIL===v?"on":""}" onclick="setOFil('${v}')">${l} ${v==="all"?base.length:(cnt[v]||0)}</button>`).join("");
+  // filter + search
+  const term=OQ.trim().toLowerCase();
+  const list=base.filter(o=>(OFIL==="all"||o.status===OFIL)&&(!term||
+    [o.code,o.name,o.phone1,o.phone2,o.district,o.address].some(x=>String(x||"").toLowerCase().includes(term))));
+  const pages=Math.max(1,Math.ceil(list.length/OPER));
+  if(OPAGE>pages)OPAGE=pages;
+  const from=(OPAGE-1)*OPER,slice=list.slice(from,from+OPER);
+  $("#olist").innerHTML=slice.length?slice.map(orderCard).join(""):'<p class="muted" style="padding:14px 0">No orders found.</p>';
+  // pager
+  if(!list.length){$("#o2pager").innerHTML="";return;}
+  const set=[...new Set([1,pages,OPAGE-1,OPAGE,OPAGE+1])].filter(n=>n>=1&&n<=pages).sort((x,y)=>x-y);
+  let btns="",prev=0;
+  set.forEach(n=>{if(prev&&n-prev>1)btns+='<button disabled>…</button>';btns+=`<button class="${n===OPAGE?"on":""}" onclick="goOPage(${n})">${n}</button>`;prev=n;});
+  $("#o2pager").innerHTML=`<span>Showing ${from+1} to ${from+slice.length} of ${list.length} orders</span>
+    <div><button ${OPAGE<=1?"disabled":""} onclick="goOPage(${OPAGE-1})">«</button>${btns}<button ${OPAGE>=pages?"disabled":""} onclick="goOPage(${OPAGE+1})">»</button></div>`;
+}
+function orderCard(o){
+  const st=OST[o.status]||OST.received;
+  const label=(STATUSES.find(s=>s[0]===o.status)||[])[1]||o.status;
+  const msg="Hi "+o.name+", your Max Style order "+o.code+" is now: "+label+". Thank you!";
+  const qty=o.items.reduce((s,i)=>s+(Number(i.qty)||0),0);
+  const th=o.items.slice(0,2).map(itemThumb);
+  const extra=o.items.length>2?`<div class="more">+${o.items.length-2}</div>`:"";
+  const open=!!OEXP[o.id];
+  const details=open?`<div class="o2d">
       <div class="muted">Delivery within 5 working days, by ${esc(deliveryText(o.created))}</div>
-      <div><b>${esc(o.name)}</b> · ${esc(o.district)}</div>
-      <div class="muted">${esc(o.phone1)}${o.phone2?" / "+esc(o.phone2):""}</div>
+      ${o.phone2?`<div class="muted">Alt phone: ${esc(o.phone2)}</div>`:""}
       <div class="muted">${esc(o.address)}</div>
       <div style="margin:6px 0"><span style="display:inline-block;background:${(o.payment||"cod")==="cod"?"#eee":"#fdf5d8"};border-radius:999px;padding:3px 11px;font-size:13px;font-weight:600">${esc(payLine(o))}</span></div>
       ${giftHtml(o)}
       <ul>${o.items.map(i=>{const c=itemCode(i);return `<li>${c?'<span class="icode">'+c+'</span>':''}${esc(i.name)}${i.size?" ("+esc(i.size)+")":""}${i.color?" ["+esc(i.color)+"]":""} x${i.qty}</li>`;}).join("")}</ul>
-      <div class="orow"><b>Rs. ${money(o.total)}</b>
-        <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select>
-      </div>
       <a class="wa" href="https://wa.me/${waNum(o.phone1)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp customer</a>
-      <button class="sec" style="margin-top:8px" onclick="printBill(${o.id})">Bill / Print</button>
       ${Number(o.slips)>0?`<button class="sec" style="margin-top:8px;border-color:#c9961a;background:#fdf5d8" onclick="viewSlip(${o.id})">📎 View slip (${Number(o.slips)})</button>`:""}
       ${(o.payment||"cod")!=="cod"&&o.pay_state!=="paid"?`<button class="sec" style="margin-top:8px" onclick="markPaid(${o.id})">Slip ආවා ✓ · Mark as paid</button>`:""}
       <div class="brow"><button class="edt" onclick="editOrder(${o.id})">Edit</button><button class="del" onclick="delOrder(${o.id})">Delete</button></div>
-    </div>`;}).join(""):"<p>No orders yet.</p>";
+    </div>`:"";
+  return `<div class="o2c" style="--c:${st[1]};--bg:${st[2]};--fg:${st[3]}">
+    <div class="o2g">
+      <div class="o2l">
+        <span class="o2code">${esc(o.code)}</span>
+        <span class="o2cnt">${qty} item${qty===1?"":"s"}</span>
+        <div class="o2th${o.items.length===1?" one":""}">${th.join("")}${extra}</div>
+      </div>
+      <div class="o2m">
+        <b>👤 ${esc(o.name)}</b>
+        <div>📞 ${esc(o.phone1)}</div>
+        <div>📍 ${esc(o.district)}</div>
+        <div>🕒 ${esc(shortDt(o.created))}</div>
+      </div>
+      <div class="o2r">
+        <div class="o2st"><span>${st[0]}</span>
+          <select onchange="setOrderStatus(${o.id},this.value)">${STATUSES.map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}</select><u>▼</u></div>
+        <div class="o2tot">Rs. ${money(o.total)}</div>
+        <div class="o2btn"><button onclick="toggleO(${o.id})">${open?"▲ Hide":"👁 View"}</button><button onclick="printBill(${o.id})">🖨 Print</button></div>
+      </div>
+    </div>${details}
+  </div>`;
 }
+function toggleO(id){OEXP[id]=!OEXP[id];renderOrders();}
+function goOPage(n){OPAGE=n;renderOrders();$("#olist").scrollIntoView({block:"start"});}
+function setOFil(v){OFIL=v;OPAGE=1;renderOrders();}
+$("#o2q").oninput=e=>{OQ=e.target.value;OPAGE=1;renderOrders();};
+$("#o2range").onchange=e=>{ORNG=e.target.value;OPAGE=1;renderOrders();};
+$("#o2f").onclick=()=>{const f=$("#o2fpanel");f.style.display=f.style.display==="flex"?"none":"flex";};
 // Shows the payment slip photos of one order (admin only: the server asks for the password).
 async function viewSlip(id){
   const r=await fetch("/api/slip?order="+id,{headers:hdr()});
