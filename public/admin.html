@@ -176,7 +176,10 @@ html,body{overscroll-behavior:none}
 .dt-acts button{width:100%;margin:0;padding:13px 4px;font-size:14px;border-radius:12px;background:#fff;color:#111;border:1px solid #ddd}
 .dt-acts .dt-share{background:#f3c846;border-color:#f3c846}
 .dt-extra{margin:0 10px 12px;display:flex;flex-direction:column;gap:6px}
-.dt-extra button{margin:0}</style>
+.dt-extra button{margin:0}
+/* order page: keep the last buttons clear of the bottom menu when scrolled to the end */
+#vDetail .box{margin-bottom:40px}
+#vDetail .dt-acts{margin-bottom:18px}</style>
 </head>
 <body>
 <div class="topbar">
@@ -811,7 +814,7 @@ function renderDetail(){
   const dateTxt=o.created?new Date(o.created).toLocaleDateString("en-GB",{timeZone:"Asia/Colombo",day:"2-digit",month:"short",year:"numeric"}):"";
   const timeTxt=o.created?new Date(o.created).toLocaleTimeString("en-US",{timeZone:"Asia/Colombo",hour:"2-digit",minute:"2-digit",hour12:true}):"";
   const needSlip=(o.payment||"cod")!=="cod"&&o.pay_state!=="paid";
-  $("#dbox").innerHTML=`<div class="dt">
+  $("#dbox").innerHTML=`<div class="box" style="padding:10px"><div class="dt">
     <div class="dt-bar">
       <button class="dt-back" onclick="goBackFromOrder()">‹ &nbsp;Back to Orders</button>
       <button class="dt-edit" onclick="editFromDetail(${o.id})">✎ Edit Order</button>
@@ -868,7 +871,7 @@ function renderDetail(){
       <button onclick="printBill(${o.id},true)">🖨 Print Bill</button>
       <button class="dt-share" onclick="shareOrder(${o.id})">↗ Share Order</button>
     </div>
-  </div>`;
+  </div></div>`;
 }
 function goBackFromOrder(){ if(history.state&&history.state.av)history.back(); else showView("orders"); }
 function editFromDetail(id){ showView("orders"); editOrder(id); }
@@ -1145,27 +1148,6 @@ if(pw)login();
 // Lets the admin page be installed as an app on the phone
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
-<script>
-// Pull down at the top = refresh the data (orders / products / stats), not a browser reload
-let _ty0=0,_pull=false,_busy=false;
-const pullTip=document.createElement("div");
-pullTip.style.cssText="position:fixed;top:0;left:50%;transform:translate(-50%,-100%);background:#111;color:#f3c846;font-weight:700;font-size:14px;padding:8px 16px;border-radius:0 0 12px 12px;z-index:90;transition:transform .2s";
-pullTip.textContent="↻ Refreshing…";
-document.addEventListener("DOMContentLoaded",()=>document.body.appendChild(pullTip));
-document.addEventListener("touchstart",e=>{_ty0=e.touches[0].clientY;_pull=window.scrollY<=0&&!_busy;},{passive:true});
-document.addEventListener("touchmove",e=>{if(_pull&&e.cancelable&&e.touches[0].clientY-_ty0>0)e.preventDefault();},{passive:false});
-document.addEventListener("touchend",async e=>{
-  if(!_pull)return;_pull=false;
-  const dy=e.changedTouches[0].clientY-_ty0;
-  if(dy<70||!pw)return;
-  _busy=true;pullTip.style.transform="translate(-50%,0)";
-  try{
-    await load();
-    await loadOrders();
-    if($("#vStats").style.display==="block")await loadStats();
-  }catch(err){}
-  setTimeout(()=>{pullTip.style.transform="translate(-50%,-100%)";_busy=false;},400);
-},{passive:true});
-</script>
+
 </body>
 </html>
