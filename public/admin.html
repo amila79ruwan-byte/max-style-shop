@@ -536,12 +536,14 @@ async function login(){
   if(r.ok){
     sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";
     // After a pull-to-refresh, come back to the same screen instead of Home
-    let last="home";
-    try{last=sessionStorage.getItem("av")||"home";}catch(e){}
-    if(!["cats","orders","stats","banners"].includes(last))last="home";
-    history.replaceState(last==="home"?null:{av:last},"");showView(last,true);
+    let last="home", savedOrder=null;
+    try{last=sessionStorage.getItem("av")||"home";savedOrder=sessionStorage.getItem("odet");}catch(e){}
+    if(!["cats","orders","stats","banners","detail"].includes(last))last="home";
+    if(last==="detail"){ if(savedOrder) ODET=savedOrder; else last="orders"; }
+    history.replaceState(last==="home"?null:{av:last==="detail"?"orders":last},"");showView(last,true);
     await load();   // products first, so order lines can show product codes
-    loadOrders();
+    if(last==="detail"){ await loadOrders(); renderDetail(); }
+    else loadOrders();
   }
   else{$("#lmsg").textContent="Wrong password, or the server is not set up yet.";}
 }
@@ -847,6 +849,7 @@ let ODET=null;   // id of the order shown on its own page (null = list)
 // View opens the order on its own page (its Back button returns to the list)
 function viewOrder(id){
   ODET=id;
+  try{sessionStorage.setItem("odet",String(id));}catch(e){}
   history.replaceState({av:"orders"},"");   // so Back returns to the list
   showView("detail");
   renderDetail();
