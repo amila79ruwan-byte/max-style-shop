@@ -534,7 +534,12 @@ const shrink=file=>fitImage(file,720,960,.82);
 async function login(){
   const r=await fetch("/api/products",{method:"POST",headers:hdr(),body:JSON.stringify({check:true})});
   if(r.ok){
-    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";history.replaceState(null,"");showView("home",true);
+    sessionStorage.setItem("pw",pw);$("#login").style.display="none";$("#panel").style.display="block";$("#bnav").style.display="flex";
+    // After a pull-to-refresh, come back to the same screen instead of Home
+    let last="home";
+    try{last=sessionStorage.getItem("av")||"home";}catch(e){}
+    if(!["cats","orders","stats","banners"].includes(last))last="home";
+    history.replaceState(last==="home"?null:{av:last},"");showView(last,true);
     await load();   // products first, so order lines can show product codes
     loadOrders();
   }
@@ -1135,6 +1140,7 @@ $("#circs").addEventListener("click",async e=>{
 // Screens: home -> (Products) categories -> products of one category. Also Orders / Stats / Banners.
 // The phone back button goes back one step (instead of leaving the page).
 function showView(v,fromHistory){
+  try{sessionStorage.setItem("av",v);}catch(e){}
   $("#home").style.display=v==="home"?"block":"none";
   $("#vCats").style.display=v==="cats"?"block":"none";
   $("#vProducts").style.display=v==="products"?"block":"none";
